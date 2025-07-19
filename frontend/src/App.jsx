@@ -3,6 +3,8 @@ import HomePage from './pages/index'
 import Signup from './pages/Signup'
 import Signin from './pages/Signin'
 import CustomerDashboard from './pages/customer/Dashboard'
+import AdminDashboard from './pages/admin/Dashboard'
+import StaffDashboard from './pages/staff/Dashboard'
 
 
 function App() {
@@ -16,6 +18,8 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path='/signin' element={<Signin />} />
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/staff/dashboard" element={<StaffDashboard />} />
           {/* Add more routes as needed */}
         </Routes>
       </BrowserRouter>
