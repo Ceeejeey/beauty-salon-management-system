@@ -1,6 +1,7 @@
 const express = require('express');
 const { checkConnection } = require('./config/db');
 const authRoutes = require('./routes/authRouter');
+const appointmentRoutes = require('./routes/appointmentRouter');
 const app = express();
 const server = require('http').createServer(app);
 const cors = require('cors');
@@ -12,6 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/appointments', appointmentRoutes);
+
 
 // Start server
 const PORT = process.env.PORT || 3000;

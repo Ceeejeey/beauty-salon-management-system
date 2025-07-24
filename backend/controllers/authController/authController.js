@@ -1,7 +1,15 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const { pool } = require('../../config/db');
+
+// Environment variable for JWT secret
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
+
+// Hardcoded admin credentials
+const ADMIN_EMAIL = 'admin@gmail.com';
+const ADMIN_PASSWORD = '1234';
 
 // Multer configuration
 const storage = multer.diskStorage({
@@ -22,7 +30,7 @@ const upload = multer({
   },
 });
 
-// Signup function
+// Signup function (for customers only)
 const signup = async (req, res) => {
   try {
     const { fullName, phone, email, birthday, password } = req.body;
@@ -44,8 +52,11 @@ const signup = async (req, res) => {
     if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
       return res.status(400).json({ error: 'Invalid birthday format (use YYYY-MM-DD)' });
     }
+    if (email === ADMIN_EMAIL || email.startsWith('staff.')) {
+      return res.status(403).json({ error: 'Cannot signup as admin or staff' });
+    }
 
-    // Check duplicate email
+    // Check duplicate email in users table
     const [existingUsers] = await pool.execute('SELECT email FROM users WHERE email = ?', [email]);
     if (existingUsers.length > 0) {
       return res.status(409).json({ error: 'Email already exists' });
@@ -54,9 +65,9 @@ const signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await pool.execute(
-      `INSERT INTO users (name, email, phone, birthday, profile_picture, password)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [fullName, email, phone, birthday || null, profilePicture, hashedPassword]
+      `INSERT INTO users (name, email, phone, birthday, profile_picture, password, role)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [fullName, email, phone, birthday || null, profilePicture, hashedPassword, 'customer']
     );
 
     res.status(201).json({ message: 'User registered successfully' });
@@ -75,31 +86,72 @@ const signin = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Check user exists
-    const [users] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
-    if (users.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    let user;
+    let role;
+    
 
-    const user = users[0];
-
-    // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    // Check for admin
+    if (email === ADMIN_EMAIL) {
+      if (password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      role = 'admin';
+      user = {
+        user_id: 0, // Special ID for admin
+        name: 'Admin',
+        email: ADMIN_EMAIL,
+        phone: null,
+        birthday: null,
+        profile_picture: null,
+        role: 'admin',
+      };
+    } else if (email.startsWith('staff.')) {
+      // Check staff table
+      const [staff] = await pool.execute('SELECT * FROM staff WHERE email = ?', [email]);
+      if (staff.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      user = staff[0];
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      role = 'staff';
+      // Ensure role is set
+      if (user.role !== 'staff') {
+        await pool.execute('UPDATE staff SET role = ? WHERE user_id = ?', ['staff', user.user_id]);
+        user.role = 'staff';
+      }
+    } else {
+      // Check users table
+      const [users] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
+      if (users.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      user = users[0];
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      role = 'customer';
+      // Ensure role is set
+      if (user.role !== 'customer') {
+        await pool.execute('UPDATE users SET role = ? WHERE user_id = ?', ['customer', user.user_id]);
+        user.role = 'customer';
+      }
     }
 
     // Create JWT Token
     const token = jwt.sign(
       {
-        id: user.id,
+        user_id: user.user_id,
         name: user.name,
         email: user.email,
+        role: role,
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -109,12 +161,13 @@ const signin = async (req, res) => {
       message: 'Login successful',
       token,
       user: {
-        id: user.id,
+        user_id: user.user_id,
         name: user.name,
         email: user.email,
-        phone: user.phone,
-        birthday: user.birthday,
-        profilePicture: user.profile_picture,
+        phone: user.phone || null,
+        birthday: user.birthday || null,
+        profilePicture: user.profile_picture || null,
+        role: role,
       },
     });
   } catch (error) {
@@ -126,5 +179,5 @@ const signin = async (req, res) => {
 module.exports = {
   signup: upload.single('profilePicture'),
   signupHandler: signup,
-  signin
+  signin,
 };
