@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
 import salonImage from '../assets/salon2.jpg';
 
@@ -7,6 +7,7 @@ const Signin = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -23,16 +24,22 @@ const Signin = () => {
         headers: { 'Content-Type': 'application/json' },
       });
 
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       setSuccess(response.data.message || 'Signin successful!');
       setFormData({ email: '', password: '' });
 
-      // Optionally store token
-      localStorage.setItem('token', response.data.token);
-      console.log("JWT Token:", response.data.token);
-
-      // Redirect or further actions can be added here
+      // Redirect based on role
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (user.role === 'staff') {
+        navigate('/staff/dashboard');
+      } else {
+        navigate('/customer/dashboard');
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Signin error:', err);
       setError(err.response?.data?.error || 'Signin failed!');
     }
   };
@@ -54,6 +61,16 @@ const Signin = () => {
             color: #6b7280;
             font-family: 'Poppins', sans-serif;
             pointer-events: none;
+            transition: all 0.2s ease;
+          }
+          .input-container input:focus + label,
+          .input-container input:not(:placeholder-shown) + label {
+            top: -10px;
+            left: 8px;
+            font-size: 0.75rem;
+            color: #f43f5e;
+            background: #fff;
+            padding: 0 4px;
           }
         `}
       </style>
@@ -82,7 +99,7 @@ const Signin = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder=" "
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none font-poppins"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 font-poppins"
                   required
                 />
                 <label htmlFor="email">Email Address</label>
@@ -95,7 +112,7 @@ const Signin = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder=" "
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none font-poppins"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 font-poppins"
                   required
                 />
                 <label htmlFor="password">Password</label>
@@ -103,7 +120,7 @@ const Signin = () => {
 
               <button
                 type="submit"
-                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 rounded-lg font-poppins"
+                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 rounded-lg font-poppins transition duration-200"
               >
                 Sign In
               </button>
