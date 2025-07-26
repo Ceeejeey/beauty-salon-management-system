@@ -4,6 +4,7 @@ const authRoutes = require('./routes/authRouter');
 const appointmentRoutes = require('./routes/appointmentRouter');
 const staffRoutes = require('./routes/staffRoutes');
 const serviceRoutes = require('./routes/serviceRouter');
+const promotionsRoutes = require('./routes/promotionsRouter'); // Assuming you have a promotionsRouter
 const app = express();
 const server = require('http').createServer(app);
 const cors = require('cors');
@@ -18,6 +19,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/promotions', promotionsRoutes); // Assuming you have a promotionsRouter
 
 // Start server
 const PORT = process.env.PORT || 3000;
