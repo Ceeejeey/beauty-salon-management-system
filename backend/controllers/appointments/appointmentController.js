@@ -170,7 +170,37 @@ const updateAppointment = async (req, res) => {
   }
 };
 
+// Get completed appointments for a specific customer
+const getAppointmentByCustomerId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Valid customer ID is required' });
+    }
+    // Ensure customers can only access their own appointments
+    if (req.user.role === 'customer' && parseInt(id) !== req.user.user_id) {
+      return res.status(403).json({ error: 'Access denied: Cannot view other users\' appointments' });
+    }
+    const [appointments] = await pool.execute(
+      `SELECT a.appointment_id, a.customer_id, a.service_id, a.appointment_date, a.appointment_time, a.status, a.notes, s.name AS service_name, u.name AS customer_name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       JOIN users u ON a.customer_id = u.user_id
+       WHERE a.customer_id = ? AND a.status = 'Completed'`,
+      [id]
+    );
+    res.status(200).json({
+      message: 'Appointments retrieved successfully',
+      appointments,
+    });
+  } catch (error) {
+    console.error('Get appointments by customer ID error:', error);
+    res.status(500).json({ error: 'Server error during appointments retrieval' });
+  }
+};
+
 module.exports = {
   createAppointment: [createAppointment],
   updateAppointment: [updateAppointment],
+  getAppointmentByCustomerId: [getAppointmentByCustomerId],
 };
