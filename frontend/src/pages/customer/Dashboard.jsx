@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBookmark, FaBookOpen, FaBookReader, FaCalendarAlt, FaRegBookmark, FaUserAlt } from 'react-icons/fa';
+import { FaBookmark, FaBookOpen, FaBookReader, FaCalendarAlt, FaLock, FaRegBookmark, FaUserAlt } from 'react-icons/fa';
 import Sidebar from '../../components/customer/Sidebar';
 import Navbar from '../../components/customer/Navbar';
 import BookAppointment from '../../components/customer/Appoinments';
@@ -327,7 +327,7 @@ const ChangePassword = ({ setActiveComponent }) => {
         `}
       </style>
       <h2 className="text-3xl sm:text-4xl font-bold text-pink-700 mb-6 flex items-center">
-        <FaUserAlt className="mr-3 text-pink-500" /> Change Password
+        <FaLock className="mr-3 text-pink-500" /> Change Password
       </h2>
       <p className="text-gray-700 text-lg mb-8">Update your account password securely.</p>
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
@@ -390,14 +390,6 @@ const ChangePassword = ({ setActiveComponent }) => {
     </div>
   );
 };
-
-const Settings = () => (
-  <div className="p-6 sm:p-10 font-poppins bg-gradient-to-br from-pink-50 to-white">
-    <h2 className="text-3xl sm:text-4xl font-extrabold text-pink-700 mb-6">Settings</h2>
-    <p className="text-gray-700 text-lg mb-8">Adjust your account settings.</p>
-    {/* Add settings form here */}
-  </div>
-);
 
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
