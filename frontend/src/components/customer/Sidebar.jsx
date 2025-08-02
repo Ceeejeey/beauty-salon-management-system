@@ -52,10 +52,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
           }
         `}
       </style>
-      <div className="p-6 font-poppins sidebar-scroll">
-        <h2 className="text-2xl font-bold text-pink-700 mb-8 text-center">
-          Dashboard
-        </h2>
+      <div className="p-10 font-poppins sidebar-scroll">
         <nav className="space-y-3">
           {navItems.map((item) => (
             <div key={item.name}>
