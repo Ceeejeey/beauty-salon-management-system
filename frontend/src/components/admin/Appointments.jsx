@@ -1,90 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { FaCalendarAlt, FaCheck, FaEye } from 'react-icons/fa';
-//import axios from 'axios';
-
-// Sample appointments data (replace with API call)
-const initialAppointments = [
-  {
-    id: 1,
-    service: 'Haircut & Styling',
-    customerName: 'Jane Doe',
-    date: '2025-07-20',
-    time: '2:00 PM',
-    staffId: null,
-    staffName: null,
-    status: 'Pending',
-  },
-  {
-    id: 2,
-    service: 'Manicure & Pedicure',
-    customerName: 'Emily Smith',
-    date: '2025-07-25',
-    time: '10:00 AM',
-    staffId: 1,
-    staffName: 'Emma Johnson',
-    status: 'Approved',
-  },
-  {
-    id: 3,
-    service: 'Facial Treatment',
-    customerName: 'Sarah Brown',
-    date: '2025-08-01',
-    time: '3:00 PM',
-    staffId: null,
-    staffName: null,
-    status: 'Pending',
-  },
-];
-
-// Sample staff data (replace with API call)
-const initialStaff = [
-  { id: 1, name: 'Emma Johnson' },
-  { id: 2, name: 'Liam Davis' },
-  { id: 3, name: 'Olivia Wilson' },
-];
+import { FaCalendarAlt, FaCheck, FaEye, FaTimes } from 'react-icons/fa';
+import axios from '../../api/axios';
+import { jwtDecode } from 'jwt-decode';
 
 const ViewAssignAppointments = ({ setActiveComponent }) => {
-  const [appointments, setAppointments] = useState(initialAppointments);
-  const [staff, setStaff] = useState(initialStaff);
+  const [appointments, setAppointments] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [selectedStaff, setSelectedStaff] = useState({});
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [rejectionNote, setRejectionNote] = useState('');
 
-  // Fetch appointments and staff (placeholder for API calls)
+  // Verify admin role and fetch data
   useEffect(() => {
-    // axios.get('/api/appointments').then((response) => setAppointments(response.data));
-    // axios.get('/api/staff').then((response) => setStaff(response.data));
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Please log in as an admin to view appointments');
+          return;
+        }
+        const decoded = jwtDecode(token);
+        if (decoded.role !== 'admin') {
+          setError('Access restricted to admins');
+          return;
+        }
+
+        // Fetch pending appointments
+        const appointmentResponse = await axios.get('/api/appointments/get-pending-appointments', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAppointments(appointmentResponse.data.appointments);
+        setSuccess(appointmentResponse.data.message);
+
+        // Fetch staff
+        const staffResponse = await axios.get('/api/staff/get-staff', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setStaff(staffResponse.data.staff);
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to fetch data');
+      }
+    };
+    fetchData();
   }, []);
 
-  // Handle staff assignment
-  const handleAssignStaff = async (appointmentId) => {
-    const staffId = selectedStaff[appointmentId];
-    if (!staffId) {
-      console.log('No staff selected for appointment:', appointmentId);
-      return;
-    }
-
-    try {
-      const selectedStaffMember = staff.find((s) => s.id === parseInt(staffId));
-      // await axios.put(`/api/appointments/${appointmentId}`, {
-      //   staffId,
-      //   staffName: selectedStaffMember.name,
-      //   status: 'Approved',
-      // });
-      setAppointments(
-        appointments.map((appt) =>
-          appt.id === appointmentId
-            ? {
-                ...appt,
-                staffId,
-                staffName: selectedStaffMember.name,
-                status: 'Approved',
-              }
-            : appt
-        )
-      );
-      console.log('Staff assigned to appointment:', appointmentId, 'Staff:', selectedStaffMember.name);
-    } catch (error) {
-      console.error('Error assigning staff:', error);
-    }
+  // Format time to 12-hour format
+  const formatTime = (time) => {
+    return new Date(`1970-01-01T${time}`).toLocaleTimeString([], {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   };
 
   // Handle staff selection change
@@ -92,32 +61,136 @@ const ViewAssignAppointments = ({ setActiveComponent }) => {
     setSelectedStaff({ ...selectedStaff, [appointmentId]: staffId });
   };
 
+  // Handle staff assignment
+  const handleAssignStaff = async (appointmentId) => {
+    const staffId = selectedStaff[appointmentId];
+    if (!staffId) {
+      setError('Please select a staff member');
+      return;
+    }
+
+    try {
+      
+      const response = await axios.put(
+        `/api/appointments/update-appointment/${appointmentId}`,
+        {
+          staff_id: staffId,
+         
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }
+      );
+      setAppointments((prev) =>
+        prev.map((appt) =>
+          appt.appointment_id === appointmentId ? response.data.appointment : appt
+        )
+      );
+      setSuccess('Staff assigned successfully');
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to assign staff');
+      setSuccess(null);
+    }
+  };
+
+  // Open reject modal
+  const openRejectModal = (appointment) => {
+    setSelectedAppointment(appointment);
+    setRejectionNote('');
+    setIsRejectModalOpen(true);
+  };
+
+  // Handle appointment rejection
+  const handleReject = async (e) => {
+    e.preventDefault();
+    if (!rejectionNote) {
+      setError('Rejection note is required');
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `/api/appointments/reject-appointment/${selectedAppointment.appointment_id}`,
+        { rejection_note: rejectionNote },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }
+      );
+      setAppointments((prev) =>
+        prev.map((appt) =>
+          appt.appointment_id === selectedAppointment.appointment_id ? response.data.appointment : appt
+        )
+      );
+      setSuccess('Appointment rejected successfully');
+      setError(null);
+      setIsRejectModalOpen(false);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to reject appointment');
+      setSuccess(null);
+    }
+  };
+
   // Handle view details
   const handleViewDetails = (appointment) => {
-    console.log('View appointment details:', appointment);
-    // Placeholder for modal or navigation
+    setSelectedAppointment(appointment);
+    setIsDetailsModalOpen(true);
   };
 
   return (
     <div className="p-6 sm:p-10 font-poppins bg-gradient-to-br from-pink-50 to-white">
       <style>
         {`
-          .appointments-scroll::-webkit-scrollbar {
+          .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+          }
+          .modal-content {
+            background: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+          }
+          .modal-scroll::-webkit-scrollbar {
             width: 8px;
           }
-          .appointments-scroll::-webkit-scrollbar-track {
+          .modal-scroll::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 4px;
           }
-          .appointments-scroll::-webkit-scrollbar-thumb {
+          .modal-scroll::-webkit-scrollbar-thumb {
             background: #ec4899; /* pink-500 */
             border-radius: 4px;
           }
-          .appointments-scroll::-webkit-scrollbar-thumb:hover {
+          .modal-scroll::-webkit-scrollbar-thumb:hover {
             background: #db2777; /* pink-600 */
           }
           .table-container {
             overflow-x: auto;
+          }
+          .table-container::-webkit-scrollbar {
+            height: 8px;
+          }
+          .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+          .table-container::-webkit-scrollbar-thumb {
+            background: #ec4899; /* pink-500 */
+            border-radius: 4px;
+          }
+          .table-container::-webkit-scrollbar-thumb:hover {
+            background: #db2777; /* pink-600 */
           }
         `}
       </style>
@@ -125,12 +198,14 @@ const ViewAssignAppointments = ({ setActiveComponent }) => {
         <FaCalendarAlt className="mr-3 text-pink-500" /> View & Assign Appointments
       </h2>
       <p className="text-gray-700 text-lg mb-8">
-        View all appointments and assign staff to pending bookings. Assigned appointments are automatically approved.
+        View all pending appointments and assign staff or reject bookings. Assigned appointments are automatically approved.
       </p>
-      
+      {success && <div className="text-green-500 mb-4">{success}</div>}
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <div className="table-container">
         {appointments.length === 0 ? (
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 text-center">
-            <p className="text-gray-700 text-lg">No appointments available.</p>
+            <p className="text-gray-700 text-lg">No pending appointments available.</p>
             <button
               className="mt-4 bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 transition font-poppins"
               onClick={() => setActiveComponent('Admin Home')}
@@ -139,90 +214,174 @@ const ViewAssignAppointments = ({ setActiveComponent }) => {
             </button>
           </div>
         ) : (
-          <div className="table-container">
-            <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
-              <thead>
-                <tr className="bg-pink-100 text-pink-700">
-                  <th className="px-6 py-4 text-left font-semibold text-base">Service</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Customer</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Date</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Time</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Staff</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Status</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appointments.map((appointment) => (
-                  <tr
-                    key={appointment.id}
-                    className="border-t border-pink-100 hover:bg-pink-50 transition duration-200"
-                  >
-                    <td className="px-6 py-4 text-gray-700">{appointment.service}</td>
-                    <td className="px-6 py-4 text-gray-700">{appointment.customerName}</td>
-                    <td className="px-6 py-4 text-pink-500 font-medium">{appointment.date}</td>
-                    <td className="px-6 py-4 text-pink-500 font-medium">{appointment.time}</td>
-                    <td className="px-6 py-4">
-                      {appointment.status === 'Approved' ? (
-                        <span className="text-gray-700">{appointment.staffName}</span>
-                      ) : (
-                        <select
-                          value={selectedStaff[appointment.id] || ''}
-                          onChange={(e) => handleStaffChange(appointment.id, e.target.value)}
-                          className="p-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                        >
-                          <option value="" disabled>
-                            Select Staff
-                          </option>
-                          {staff.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`${
-                          appointment.status === 'Approved' ? 'text-green-600' : 'text-yellow-600'
-                        } font-medium`}
+          <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
+            <thead>
+              <tr className="bg-pink-100 text-pink-700">
+                <th className="px-6 py-4 text-left font-semibold text-base">Service</th>
+                <th className="px-6 py-4 text-left font-semibold text-base">Customer</th>
+                <th className="px-6 py-4 text-left font-semibold text-base">Date</th>
+                <th className="px-6 py-4 text-left font-semibold text-base">Time</th>
+                <th className="px-6 py-4 text-left font-semibold text-base">Staff</th>
+                <th className="px-6 py-4 text-left font-semibold text-base">Status</th>
+                <th className="px-6 py-4 text-left font-semibold text-base">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {appointments.map((appointment) => (
+                <tr
+                  key={appointment.appointment_id}
+                  className="border-t border-pink-100 hover:bg-pink-50 transition duration-200"
+                >
+                  <td className="px-6 py-4 text-gray-700">{appointment.service_name}</td>
+                  <td className="px-6 py-4 text-gray-700">{appointment.customer_name}</td>
+                  <td className="px-6 py-4 text-pink-500 font-medium">{appointment.appointment_date}</td>
+                  <td className="px-6 py-4 text-pink-500 font-medium">{formatTime(appointment.appointment_time)}</td>
+                  <td className="px-6 py-4">
+                    {appointment.status === 'Approved' ? (
+                      <span className="text-gray-700">{appointment.staff_name || 'N/A'}</span>
+                    ) : (
+                      <select
+                        value={selectedStaff[appointment.appointment_id] || ''}
+                        onChange={(e) => handleStaffChange(appointment.appointment_id, e.target.value)}
+                        className="p-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                       >
-                        {appointment.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 flex space-x-2">
-                      {appointment.status === 'Pending' && (
+                        <option value="" disabled>
+                          Select Staff
+                        </option>
+                        {staff.map((s) => (
+                          <option key={s.user_id} value={s.user_id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`${
+                        appointment.status === 'Approved' ? 'text-green-600' : 'text-yellow-600'
+                      } font-medium`}
+                    >
+                      {appointment.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 flex space-x-2">
+                    {appointment.status === 'Pending' && (
+                      <>
                         <button
                           className="text-pink-500 hover:text-pink-600 transition"
-                          onClick={() => handleAssignStaff(appointment.id)}
+                          onClick={() => handleAssignStaff(appointment.appointment_id)}
+                          title="Assign Staff"
                         >
                           <FaCheck className="text-lg" />
                         </button>
-                      )}
-                      <button
-                        className="text-pink-500 hover:text-pink-600 transition"
-                        onClick={() => handleViewDetails(appointment)}
-                      >
-                        <FaEye className="text-lg" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <button
+                          className="text-pink-500 hover:text-pink-600 transition"
+                          onClick={() => openRejectModal(appointment)}
+                          title="Reject Appointment"
+                        >
+                          <FaTimes className="text-lg" />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      className="text-pink-500 hover:text-pink-600 transition"
+                      onClick={() => handleViewDetails(appointment)}
+                      title="View Details"
+                    >
+                      <FaEye className="text-lg" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-        <div className="mt-8 text-center">
-          <button
-            className="flex items-center justify-center mx-auto bg-white px-6 py-3 rounded-xl font-semibold text-pink-700 hover:bg-pink-100 hover:text-pink-500 shadow-xl hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
-            onClick={() => setActiveComponent('Admin Home')}
-          >
-            <FaCalendarAlt className="mr-2 text-pink-500" /> Back to Admin Home
-          </button>
-        </div>
       </div>
-    
+      {isRejectModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-scroll">
+            <h3 className="text-2xl font-bold text-pink-700 mb-4">Reject Appointment</h3>
+            <p className="text-gray-600 mb-4">
+              Service: <span className="font-medium">{selectedAppointment.service_name}</span>
+            </p>
+            <p className="text-gray-600 mb-4">
+              Customer: <span className="font-medium">{selectedAppointment.customer_name}</span>
+            </p>
+            <form onSubmit={handleReject}>
+              <div className="mb-4">
+                <label className="block text-gray-700 font-semibold mb-2">Rejection Reason</label>
+                <textarea
+                  value={rejectionNote}
+                  onChange={(e) => setRejectionNote(e.target.value)}
+                  className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white resize-none"
+                  rows="4"
+                  placeholder="Enter reason for rejection"
+                  required
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 transition font-poppins"
+                >
+                  Reject Appointment
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 bg-white text-pink-700 px-4 py-2 rounded-lg border border-pink-500 hover:bg-pink-100 hover:text-pink-500 transition font-poppins"
+                  onClick={() => setIsRejectModalOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {isDetailsModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-scroll">
+            <h3 className="text-2xl font-bold text-pink-700 mb-4">Appointment Details</h3>
+            <p className="text-gray-600 mb-2">
+              <strong>Service:</strong> {selectedAppointment.service_name}
+            </p>
+            <p className="text-gray-600 mb-2">
+              <strong>Customer:</strong> {selectedAppointment.customer_name}
+            </p>
+            <p className="text-gray-600 mb-2">
+              <strong>Date:</strong> {selectedAppointment.appointment_date}
+            </p>
+            <p className="text-gray-600 mb-2">
+              <strong>Time:</strong> {formatTime(selectedAppointment.appointment_time)}
+            </p>
+            <p className="text-gray-600 mb-2">
+              <strong>Status:</strong> {selectedAppointment.status}
+            </p>
+            <p className="text-gray-600 mb-2">
+              <strong>Staff:</strong> {selectedAppointment.staff_name || 'Not assigned'}
+            </p>
+            <p className="text-gray-600 mb-4">
+              <strong>Notes:</strong> {selectedAppointment.notes || 'None'}
+            </p>
+            <button
+              className="w-full bg-white text-pink-700 px-4 py-2 rounded-lg border border-pink-500 hover:bg-pink-100 hover:text-pink-500 transition font-poppins"
+              onClick={() => setIsDetailsModalOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="mt-8 text-center">
+        <button
+          className="flex items-center justify-center mx-auto bg-white px-6 py-3 rounded-xl font-semibold text-pink-700 hover:bg-pink-100 hover:text-pink-500 shadow-xl hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
+          onClick={() => setActiveComponent('Admin Home')}
+        >
+          <FaCalendarAlt className="mr-2 text-pink-500" /> Back to Admin Home
+        </button>
+      </div>
+    </div>
   );
 };
 

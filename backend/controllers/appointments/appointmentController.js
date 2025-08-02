@@ -345,14 +345,84 @@ const getAppointmentById = async (req, res) => {
   }
 };
 
-//update appointe
+//get pending appointment for admin
+const getPendingAppointments = async (req, res) => {
+  try {
+    const [appointments] = await pool.execute(
+      `SELECT a.appointment_id, a.customer_id, a.service_id, a.appointment_date, a.appointment_time, a.status, a.notes, 
+              s.name AS service_name, u.name AS customer_name, st.user_id AS staff_id, st.name AS staff_name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       JOIN users u ON a.customer_id = u.user_id
+       LEFT JOIN staff st ON a.staff_id = st.user_id
+       WHERE a.status = 'Pending'`
+    );
+    res.status(200).json({
+      message: 'Pending appointments retrieved successfully',
+      appointments,
+    });
+  } catch (error) {
+    console.error('Get pending appointments error:', error);
+    res.status(500).json({ error: 'Server error during appointments retrieval' });
+  }
+};
+
+// Reject appointment (admin)
+const rejectAppointment = async (req, res) => {
+  try {
+    const { appointment_id } = req.params;
+    const { rejection_note } = req.body;
+
+    if (!appointment_id || isNaN(appointment_id)) {
+      return res.status(400).json({ error: 'Valid appointment ID is required' });
+    }
+    if (!rejection_note) {
+      return res.status(400).json({ error: 'Rejection note is required' });
+    }
+
+    // Verify appointment exists
+    const [appointments] = await pool.execute('SELECT * FROM appointments WHERE appointment_id = ?', [appointment_id]);
+    if (appointments.length === 0) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    // Update appointment
+    await pool.execute(
+      `UPDATE appointments SET status = 'Rejected', notes = CONCAT(COALESCE(notes, ''), '\nRejection reason: ', ?) 
+       WHERE appointment_id = ?`,
+      [rejection_note, appointment_id]
+    );
+
+    // Fetch updated appointment
+    const [updatedAppointment] = await pool.execute(
+      `SELECT a.appointment_id, a.customer_id, a.service_id, a.appointment_date, a.appointment_time, a.status, a.notes, 
+              s.name AS service_name, u.name AS customer_name, st.user_id AS staff_id, st.name AS staff_name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       JOIN users u ON a.customer_id = u.user_id
+       LEFT JOIN staff st ON a.staff_id = st.user_id
+       WHERE a.appointment_id = ?`,
+      [appointment_id]
+    );
+
+    res.status(200).json({
+      message: 'Appointment rejected successfully',
+      appointment: updatedAppointment[0],
+    });
+  } catch (error) {
+    console.error('Reject appointment error:', error);
+    res.status(500).json({ error: 'Server error during appointment rejection' });
+  }
+};
 
 module.exports = {
   createAppointment: [createAppointment],
   updateAppointmentforCustomer: [updateAppointmentforCustomer],
   updateAppointment: [updateAppointment],
   getAppointmentByCustomerId: [getAppointmentByCustomerId],
+  rejectAppointment: [rejectAppointment],
   getAppointmentByCustomerIdForReschedule: [getAppointmentByCustomerIdForReschedule],
   getAppointmentById: [getAppointmentById],
   deleteAppointment: [deleteAppointment],
+  getPendingAppointments: [getPendingAppointments],
 };

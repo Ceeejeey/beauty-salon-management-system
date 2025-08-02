@@ -1,6 +1,6 @@
 const express = require('express');
 const { createAppointment, updateAppointment, getAppointmentByCustomerId, updateAppointmentforCustomer, deleteAppointment
-, getAppointmentById, getAppointmentByCustomerIdForReschedule } = require('../controllers/appointments/appointmentController');
+, getAppointmentById, getAppointmentByCustomerIdForReschedule, getPendingAppointments, rejectAppointment } = require('../controllers/appointments/appointmentController');
 
 const { verifyCustomer , verifyAdmin} = require('../middlewares/verifyUser');
 
@@ -24,5 +24,10 @@ appointmentRouter.get('/get-appointment-by-id/:appointment_id', verifyCustomer, 
 
 // Route for getting appointment by customer ID for reschedule
 appointmentRouter.get('/get-appointment-by-customer-id/:customer_id', verifyCustomer, getAppointmentByCustomerIdForReschedule);
+
+// Route for getting pending appointments
+appointmentRouter.get('/get-pending-appointments', verifyAdmin, getPendingAppointments);
+// Route for rejecting an appointment
+appointmentRouter.put('/reject-appointment/:appointment_id', verifyAdmin, rejectAppointment);
 
 module.exports = appointmentRouter;
