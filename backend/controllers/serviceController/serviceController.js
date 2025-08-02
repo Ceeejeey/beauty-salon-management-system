@@ -1,20 +1,45 @@
 const { pool } = require('../../config/db');
 
 
+// Validate base64 image
+const validateImage = (image) => {
+  if (!image) return true; // Image is optional
+  if (typeof image !== 'string' || !image.startsWith('data:image/')) {
+    return false;
+  }
+  const base64Data = image.split(',')[1];
+  if (!base64Data) return false;
+  const buffer = Buffer.from(base64Data, 'base64');
+  // Check size (5MB limit)
+  if (buffer.length > 5 * 1024 * 1024) {
+    return false;
+  }
+  return true;
+};
+
 // Create service
 const createService = async (req, res) => {
   try {
-    const { name, category, description, price, duration } = req.body;
+    const { name, category, description, price, duration, image } = req.body;
 
     // Input validation
     if (!name || !category || !price || !duration) {
       return res.status(400).json({ error: 'Name, category, price, and duration are required' });
+    }
+    if (typeof name !== 'string' || name.trim() === '') {
+      return res.status(400).json({ error: 'Name must be a non-empty string' });
+    }
+    if (typeof category !== 'string' || category.trim() === '') {
+      return res.status(400).json({ error: 'Category must be a non-empty string' });
     }
     if (typeof price !== 'number' || price < 0) {
       return res.status(400).json({ error: 'Price must be a non-negative number' });
     }
     if (typeof duration !== 'string' || duration.trim() === '') {
       return res.status(400).json({ error: 'Duration must be a non-empty string' });
+    }
+    if (!validateImage(image)) {
+      return res.status(400).json({ error: 'Image must be a valid base64 string (max 5MB)' });
     }
 
     // Check if service name already exists
@@ -23,19 +48,26 @@ const createService = async (req, res) => {
       return res.status(400).json({ error: 'Service name already exists' });
     }
 
+    // Convert base64 image to buffer (or null if not provided)
+    const imageBuffer = image ? Buffer.from(image.split(',')[1], 'base64') : null;
+
     // Insert service
     const [result] = await pool.execute(
-      `INSERT INTO services (name, category, description, price, duration)
-       VALUES (?, ?, ?, ?, ?)`,
-      [name, category || null, description || null, price, duration]
+      `INSERT INTO services (name, category, description, price, duration, image)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [name, category, description || null, price, duration, imageBuffer]
     );
 
-    // Fetch created service
-    const [newService] = await pool.execute('SELECT * FROM services WHERE service_id = ?', [result.insertId]);
+    // Fetch created service (image returned as base64)
+    const [newService] = await pool.execute('SELECT service_id, name, category, description, price, duration, image FROM services WHERE service_id = ?', [result.insertId]);
+    const service = newService[0];
+    if (service.image) {
+      service.image = `data:image/jpeg;base64,${service.image.toString('base64')}`;
+    }
 
     res.status(201).json({
       message: 'Service created successfully',
-      service: newService[0],
+      service,
     });
   } catch (error) {
     console.error('Create service error:', error);
@@ -43,13 +75,85 @@ const createService = async (req, res) => {
   }
 };
 
+// Update service
+const updateService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, description, price, duration, image } = req.body;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Valid service ID is required' });
+    }
+    if (!name || !category || !price || !duration) {
+      return res.status(400).json({ error: 'Name, category, price, and duration are required' });
+    }
+    if (typeof name !== 'string' || name.trim() === '') {
+      return res.status(400).json({ error: 'Name must be a non-empty string' });
+    }
+    if (typeof category !== 'string' || category.trim() === '') {
+      return res.status(400).json({ error: 'Category must be a non-empty string' });
+    }
+    if (typeof price !== 'number' || price < 0) {
+      return res.status(400).json({ error: 'Price must be a non-negative number' });
+    }
+    if (typeof duration !== 'string' || duration.trim() === '') {
+      return res.status(400).json({ error: 'Duration must be a non-empty string' });
+    }
+    if (!validateImage(image)) {
+      return res.status(400).json({ error: 'Image must be a valid base64 string (max 5MB)' });
+    }
+
+    // Check if service exists
+    const [services] = await pool.execute('SELECT * FROM services WHERE service_id = ?', [id]);
+    if (services.length === 0) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+
+    // Check for duplicate name (excluding current service)
+    const [existingServices] = await pool.execute('SELECT * FROM services WHERE name = ? AND service_id != ?', [name, id]);
+    if (existingServices.length > 0) {
+      return res.status(400).json({ error: 'Service name already exists' });
+    }
+
+    // Convert base64 image to buffer (or null if not provided)
+    const imageBuffer = image ? Buffer.from(image.split(',')[1], 'base64') : null;
+
+    // Update service
+    await pool.execute(
+      `UPDATE services SET name = ?, category = ?, description = ?, price = ?, duration = ?, image = ? WHERE service_id = ?`,
+      [name, category, description || null, price, duration, imageBuffer, id]
+    );
+
+    // Fetch updated service
+    const [updatedService] = await pool.execute('SELECT service_id, name, category, description, price, duration, image FROM services WHERE service_id = ?', [id]);
+    const service = updatedService[0];
+    if (service.image) {
+      service.image = `data:image/jpeg;base64,${service.image.toString('base64')}`;
+    }
+
+    res.status(200).json({
+      message: 'Service updated successfully',
+      service,
+    });
+  } catch (error) {
+    console.error('Update service error:', error);
+    res.status(500).json({ error: 'Server error during service update' });
+  }
+};
+
 // Get all services
 const getServices = async (req, res) => {
   try {
-    const [services] = await pool.execute('SELECT * FROM services');
+    const [services] = await pool.execute('SELECT service_id, name, category, description, price, duration, image FROM services');
+    const formattedServices = services.map((service) => {
+      if (service.image) {
+        service.image = `data:image/jpeg;base64,${service.image.toString('base64')}`;
+      }
+      return service;
+    });
     res.status(200).json({
       message: 'Services retrieved successfully',
-      services,
+      services: formattedServices,
     });
   } catch (error) {
     console.error('Get services error:', error);
@@ -61,73 +165,24 @@ const getServices = async (req, res) => {
 const getServiceById = async (req, res) => {
   try {
     const { id } = req.params;
-
     if (!id || isNaN(id)) {
       return res.status(400).json({ error: 'Valid service ID is required' });
     }
-
-    const [services] = await pool.execute('SELECT * FROM services WHERE service_id = ?', [id]);
+    const [services] = await pool.execute('SELECT service_id, name, category, description, price, duration, image FROM services WHERE service_id = ?', [id]);
     if (services.length === 0) {
       return res.status(404).json({ error: 'Service not found' });
     }
-
+    const service = services[0];
+    if (service.image) {
+      service.image = `data:image/jpeg;base64,${service.image.toString('base64')}`;
+    }
     res.status(200).json({
       message: 'Service retrieved successfully',
-      service: services[0],
+      service,
     });
   } catch (error) {
-    console.error('Get service by ID:', error);
+    console.error('Get service by ID error:', error);
     res.status(500).json({ error: 'Server error during service retrieval' });
-  }
-};
-
-// Update service
-const updateService = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, category, description, price, duration } = req.body;
-
-    if (!id || isNaN(id)) {
-      return res.status(400).json({ error: 'Valid service ID is required' });
-    }
-    if (!name || !category || !price || !duration) {
-      return res.status(400).json({ error: 'Name, category, price, and duration are required' });
-    }
-    if (typeof price !== 'number' || price < 0) {
-      return res.status(400).json({ error: 'Price must be a non-negative number' });
-    }
-    if (typeof duration !== 'string' || duration.trim() === '') {
-      return res.status(400).json({ error: 'Duration must be a non-empty string' });
-    }
-
-    // Check if service exists
-    const [services] = await pool.execute('SELECT * FROM services WHERE service_id = ?', [id]);
-    if (services.length === 0) {
-      return res.status(404).json({ error: 'Service not found' });
-    }
-
-    // Check if new name is unique (excluding current service)
-    const [existingServices] = await pool.execute('SELECT * FROM services WHERE name = ? AND service_id != ?', [name, id]);
-    if (existingServices.length > 0) {
-      return res.status(400).json({ error: 'Service name already exists' });
-    }
-
-    // Update service
-    await pool.execute(
-      `UPDATE services SET name = ?, category = ?, description = ?, price = ?, duration = ? WHERE service_id = ?`,
-      [name, category || null, description || null, price, duration, id]
-    );
-
-    // Fetch updated service
-    const [updatedService] = await pool.execute('SELECT * FROM services WHERE service_id = ?', [id]);
-
-    res.status(200).json({
-      message: 'Service updated successfully',
-      service: updatedService[0],
-    });
-  } catch (error) {
-    console.error('Update service error:', error);
-    res.status(500).json({ error: 'Server error during service update' });
   }
 };
 
@@ -135,26 +190,14 @@ const updateService = async (req, res) => {
 const deleteService = async (req, res) => {
   try {
     const { id } = req.params;
-
     if (!id || isNaN(id)) {
       return res.status(400).json({ error: 'Valid service ID is required' });
     }
-
-    // Check if service exists
     const [services] = await pool.execute('SELECT * FROM services WHERE service_id = ?', [id]);
     if (services.length === 0) {
       return res.status(404).json({ error: 'Service not found' });
     }
-
-    // Check if service is referenced in appointments
-    const [appointments] = await pool.execute('SELECT * FROM appointments WHERE service_id = ?', [id]);
-    if (appointments.length > 0) {
-      return res.status(400).json({ error: 'Cannot delete service with associated appointments' });
-    }
-
-    // Delete service
     await pool.execute('DELETE FROM services WHERE service_id = ?', [id]);
-
     res.status(200).json({
       message: 'Service deleted successfully',
     });
@@ -165,9 +208,9 @@ const deleteService = async (req, res) => {
 };
 
 module.exports = {
-  createService: [ createService],
-  getServices: [ getServices],
-  getServiceById: [ getServiceById],
-  updateService: [ updateService],
-  deleteService: [ deleteService],
+  createService: [createService],
+  getServices: [getServices],
+  getServiceById: [getServiceById],
+  updateService: [updateService],
+  deleteService: [deleteService],
 };
