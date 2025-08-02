@@ -1,41 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaCalendarAlt, FaHistory } from 'react-icons/fa';
-
-// Sample services (replace with API call in production)
-const services = [
-  { id: 1, name: 'Haircut & Styling', price: '$50' },
-  { id: 2, name: 'Manicure & Pedicure', price: '$40' },
-  { id: 3, name: 'Facial Treatment', price: '$60' },
-  { id: 4, name: 'Hair Coloring', price: '$75' },
-  { id: 5, name: 'Massage Therapy', price: '$80' },
-  { id: 6, name: 'Waxing', price: '$30' },
-];
-
-// Sample time slots (replace with API call or dynamic logic)
-const timeSlots = [
-  '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-  '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
-];
+import axios from '../../api/axios';
 
 const Appointments = ({ setActiveComponent }) => {
   const [formData, setFormData] = useState({
-    service: '',
-    date: '',
-    time: '',
+    service_id: '',
+    appointment_date: '',
+    appointment_time: '',
     notes: '',
   });
+  const [services, setServices] = useState([]);
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Generate time slots (09:00 AM to 06:00 PM, hourly)
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 9; hour <= 18; hour++) {
+      const time = `${hour.toString().padStart(2, '0')}:00`;
+      slots.push(time);
+    }
+    return slots;
+  };
+
+  // Fetch services
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await axios.get('/api/services/get-services', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        setServices(response.data.services);
+        console.log('Services fetched:', response.data.services);
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to fetch services');
+      }
+    };
+    fetchServices();
+    setTimeSlots(generateTimeSlots());
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'service_id' ? parseInt(value) || '' : value,
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Placeholder for API call (e.g., axios.post('/api/appointments', formData))
-    console.log('Booking submitted:', formData);
-    // Optionally reset form or show success message
-    setFormData({ service: '', date: '', time: '', notes: '' });
+    setSuccess(null);
+    setError(null);
+
+    try {
+      const payload = {
+        service: formData.service_id,
+        date: formData.appointment_date,
+        time: formData.appointment_time,
+        notes: formData.notes || null,
+      };
+      const response = await axios.post('/api/appointments/create-appointment', payload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      setSuccess(response.data.message);
+      setFormData({ service_id: '', appointment_date: '', appointment_time: '', notes: '' });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to book appointment');
+    }
   };
 
   const handleViewHistory = () => {
@@ -76,87 +109,89 @@ const Appointments = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Schedule your next salon visit with ease. Select a service, date, and time that suits you.
       </p>
-      
-        <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Select Service</label>
-              <select
-                name="service"
-                value={formData.service}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
-                required
-              >
-                <option value="" disabled>Select a service</option>
-                {services.map((service) => (
-                  <option key={service.id} value={service.name}>
-                    {service.name} ({service.price})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Date</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
-                required
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Time</label>
-              <select
-                name="time"
-                value={formData.time}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
-                required
-              >
-                <option value="" disabled>Select a time</option>
-                {timeSlots.map((slot) => (
-                  <option key={slot} value={slot}>{slot}</option>
-                ))}
-              </select>
-            </div>
-            <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Additional Notes</label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white resize-none"
-                rows="4"
-                placeholder="Any special requests?"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-pink-600 hover:shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+      {success && <div className="text-green-500 mb-4">{success}</div>}
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
+        <form onSubmit={handleSubmit}>
+          <div className="mb-6">
+            <label className="block text-gray-700 font-semibold mb-2">Select Service</label>
+            <select
+              name="service_id"
+              value={formData.service_id}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
+              required
             >
-              Book Appointment
-            </button>
-          </form>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4">
+              <option value="" disabled>Select a service</option>
+              {services.map((service) => (
+                <option key={service.service_id} value={service.service_id}>
+                  {service.name} (${service.price})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mb-6">
+            <label className="block text-gray-700 font-semibold mb-2">Date</label>
+            <input
+              type="date"
+              name="appointment_date"
+              value={formData.appointment_date}
+              onChange={handleInputChange}
+              min="2025-07-29"
+              className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
+              required
+            />
+          </div>
+          <div className="mb-6">
+            <label className="block text-gray-700 font-semibold mb-2">Time</label>
+            <select
+              name="appointment_time"
+              value={formData.appointment_time}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
+              required
+            >
+              <option value="" disabled>Select a time</option>
+              {timeSlots.map((slot) => (
+                <option key={slot} value={slot}>
+                  {new Date(`1970-01-01T${slot}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mb-6">
+            <label className="block text-gray-700 font-semibold mb-2">Additional Notes</label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white resize-none"
+              rows="4"
+              placeholder="Any special requests?"
+            />
+          </div>
           <button
-            className="flex items-center justify-center bg-white px-6 py-3 rounded-xl font-semibold text-pink-700 hover:bg-pink-100 hover:text-pink-500 shadow-xl hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
-            onClick={handleViewHistory}
+            type="submit"
+            className="w-full bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-pink-600 hover:shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
           >
-            <FaHistory className="mr-2 text-pink-500" /> View Appointment History
+            Book Appointment
           </button>
-          <button
-            className="flex items-center justify-center bg-white px-6 py-3 rounded-xl font-semibold text-pink-700 hover:bg-pink-100 hover:text-pink-500 shadow-xl hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
-            onClick={handleCloseAppointment}
-          >
-            <FaCalendarAlt className="mr-2 text-pink-500" /> Cancel or Reschedule
-          </button>
-        </div>
-      
+        </form>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <button
+          className="flex items-center justify-center bg-white px-6 py-3 rounded-xl font-semibold text-pink-700 hover:bg-pink-100 hover:text-pink-500 shadow-xl hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
+          onClick={handleViewHistory}
+        >
+          <FaHistory className="mr-2 text-pink-500" /> View Appointment History
+        </button>
+        <button
+          className="flex items-center justify-center bg-white px-6 py-3 rounded-xl font-semibold text-pink-700 hover:bg-pink-100 hover:text-pink-500 shadow-xl hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
+          onClick={handleCloseAppointment}
+        >
+          <FaCalendarAlt className="mr-2 text-pink-500" /> Cancel or Reschedule
+        </button>
+      </div>
     </div>
   );
 };
