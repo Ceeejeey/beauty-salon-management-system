@@ -118,7 +118,7 @@ const updateAppointment = async (req, res) => {
     }
 
     // Check staff availability
-     const appointment = appointments[0];
+    const appointment = appointments[0];
     // const [availability] = await pool.execute(
     //   `SELECT * FROM availability WHERE staff_id = ? AND date = ? AND time = ? AND status = 'Available'`,
     //   [staff_id, appointment.appointment_date, appointment.appointment_time]
@@ -199,8 +199,160 @@ const getAppointmentByCustomerId = async (req, res) => {
   }
 };
 
+// Get completed appointments for a specific customer
+const getAppointmentByCustomerIdForReschedule = async (req, res) => {
+  try {
+    const { customer_id } = req.params;
+    console.log('Fetching appointments for customer ID:', customer_id);
+    if (!customer_id || isNaN(customer_id)) {
+      return res.status(400).json({ error: 'Valid customer ID is required' });
+    }
+    // Ensure customers can only access their own appointments
+    if (req.user.role === 'customer' && parseInt(customer_id) !== req.user.user_id) {
+      return res.status(403).json({ error: 'Access denied: Cannot view other users\' appointments' });
+    }
+    const [appointments] = await pool.execute(
+      `SELECT a.appointment_id, a.customer_id, a.service_id, a.appointment_date, a.appointment_time, a.status, a.notes, s.name AS service_name, u.name AS customer_name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       JOIN users u ON a.customer_id = u.user_id
+       WHERE a.customer_id = ? AND a.status != 'Completed'`,
+      [customer_id]
+    );
+    res.status(200).json({
+      message: 'Appointments retrieved successfully',
+      appointments,
+    });
+  } catch (error) {
+    console.error('Get appointments by customer ID error:', error);
+    res.status(500).json({ error: 'Server error during appointments retrieval' });
+  }
+};
+
+// Update appointment (reschedule)
+const updateAppointmentforCustomer = async (req, res) => {
+  try {
+    const { appointment_id } = req.params;
+    console.log('Updating appointment for customer:', appointment_id);
+    const { service_id, appointment_date, appointment_time, notes } = req.body;
+
+    if (!appointment_id || isNaN(appointment_id)) {
+      return res.status(400).json({ error: 'Valid appointment ID is required' });
+    }
+    if (!service_id || !appointment_date || !appointment_time) {
+      return res.status(400).json({ error: 'Service ID, date, and time are required' });
+    }
+    if (isNaN(service_id) || service_id <= 0) {
+      return res.status(400).json({ error: 'Valid service ID is required' });
+    }
+
+    // Verify appointment exists and belongs to the customer
+    const [appointments] = await pool.execute(
+      'SELECT * FROM appointments WHERE appointment_id = ? AND customer_id = ?',
+      [appointment_id, req.user.user_id]
+    );
+    if (appointments.length === 0 && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: Appointment not found or not yours' });
+    }
+
+    // Validate service exists
+    const [services] = await pool.execute('SELECT * FROM services WHERE service_id = ?', [service_id]);
+    if (services.length === 0) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+
+    // Update appointment
+    await pool.execute(
+      `UPDATE appointments
+       SET service_id = ?, appointment_date = ?, appointment_time = ?, notes = ?, status = 'Pending'
+       WHERE appointment_id = ?`,
+      [service_id, appointment_date, appointment_time, notes || null, appointment_id]
+    );
+
+    // Fetch updated appointment
+    const [updatedAppointment] = await pool.execute(
+      `SELECT a.appointment_id, a.customer_id, a.service_id, a.appointment_date, a.appointment_time, a.status, a.notes, s.name AS service_name, u.name AS customer_name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       JOIN users u ON a.customer_id = u.user_id
+       WHERE a.appointment_id = ?`,
+      [appointment_id]
+    );
+
+    res.status(200).json({
+      message: 'Appointment updated successfully',
+      appointment: updatedAppointment[0],
+    });
+  } catch (error) {
+    console.error('Update appointment error:', error);
+    res.status(500).json({ error: 'Server error during appointment update' });
+  }
+};
+
+// Delete appointment (cancel)
+const deleteAppointment = async (req, res) => {
+  try {
+    const { appointment_id } = req.params;
+
+    if (!appointment_id || isNaN(appointment_id)) {
+      return res.status(400).json({ error: 'Valid appointment ID is required' });
+    }
+
+    // Verify appointment exists and belongs to the customer
+    const [appointments] = await pool.execute(
+      'SELECT * FROM appointments WHERE appointment_id = ? AND customer_id = ?',
+      [appointment_id, req.user.user_id]
+    );
+    if (appointments.length === 0 && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: Appointment not found or not yours' });
+    }
+
+    // Delete appointment
+    await pool.execute('DELETE FROM appointments WHERE appointment_id = ?', [appointment_id]);
+
+    res.status(200).json({
+      message: 'Appointment cancelled successfully',
+    });
+  } catch (error) {
+    console.error('Delete appointment error:', error);
+    res.status(500).json({ error: 'Server error during appointment deletion' });
+  }
+};
+//get appointment by appointment id
+const getAppointmentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Valid appointment ID is required' });
+    }
+
+    // Fetch appointment details
+    const [appointments] = await pool.execute(
+      'SELECT * FROM appointments WHERE appointment_id = ? AND customer_id = ?',
+      [id, req.user.id]
+    );
+    if (appointments.length === 0 && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: Appointment not found or not yours' });
+    }
+
+    res.status(200).json({
+      message: 'Appointment fetched successfully',
+      appointment: appointments[0],
+    });
+  } catch (error) {
+    console.error('Get appointment error:', error);
+    res.status(500).json({ error: 'Server error during appointment retrieval' });
+  }
+};
+
+//update appointe
+
 module.exports = {
   createAppointment: [createAppointment],
+  updateAppointmentforCustomer: [updateAppointmentforCustomer],
   updateAppointment: [updateAppointment],
   getAppointmentByCustomerId: [getAppointmentByCustomerId],
+  getAppointmentByCustomerIdForReschedule: [getAppointmentByCustomerIdForReschedule],
+  getAppointmentById: [getAppointmentById],
+  deleteAppointment: [deleteAppointment],
 };

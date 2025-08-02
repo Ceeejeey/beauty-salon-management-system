@@ -1,5 +1,7 @@
 const express = require('express');
-const { createAppointment, updateAppointment, getAppointmentByCustomerId } = require('../controllers/appointments/appointmentController');
+const { createAppointment, updateAppointment, getAppointmentByCustomerId, updateAppointmentforCustomer, deleteAppointment
+, getAppointmentById, getAppointmentByCustomerIdForReschedule } = require('../controllers/appointments/appointmentController');
+
 const { verifyCustomer , verifyAdmin} = require('../middlewares/verifyUser');
 
 const appointmentRouter = express.Router();
@@ -11,5 +13,16 @@ appointmentRouter.get('/get-appointment/:id', verifyCustomer, getAppointmentByCu
 // Route for updating an appointment
 // Only admin can update appointments
 appointmentRouter.put('/update-appointment/:appointment_id', verifyAdmin, updateAppointment);
+// Route for updating an appointment for customer
+appointmentRouter.put('/update-appointment-for-customer/:appointment_id', verifyCustomer, updateAppointmentforCustomer);
+
+// Route for deleting an appointment
+appointmentRouter.delete('/delete-appointment/:appointment_id', verifyCustomer, deleteAppointment);
+
+// Route for getting appointment by ID
+appointmentRouter.get('/get-appointment-by-id/:appointment_id', verifyCustomer, getAppointmentById);
+
+// Route for getting appointment by customer ID for reschedule
+appointmentRouter.get('/get-appointment-by-customer-id/:customer_id', verifyCustomer, getAppointmentByCustomerIdForReschedule);
 
 module.exports = appointmentRouter;
