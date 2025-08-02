@@ -1,21 +1,13 @@
 import React from 'react';
-import { FaHome, FaCalendarCheck, FaTasks, FaList, FaSignOutAlt } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+import { FaHome, FaCalendarCheck, FaTasks, FaList } from 'react-icons/fa';
 
 const StaffSidebar = ({ setActiveComponent }) => {
-  const navigate = useNavigate();
   const menuItems = [
     { name: 'Staff Home', icon: <FaHome />, component: 'Staff Home' },
     { name: 'Set Attendance', icon: <FaCalendarCheck />, component: 'Set Attendance' },
     { name: 'View Assigned Appointments', icon: <FaTasks />, component: 'View Assigned Appointments' },
     { name: 'View Services', icon: <FaList />, component: 'View Services' },
   ];
-
-  const handleLogout = () => {
-    // Clear session (placeholder for auth logic)
-    console.log('Staff logged out');
-    navigate('/login');
-  };
 
   return (
     <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-20 font-poppins hidden lg:block">
@@ -33,13 +25,6 @@ const StaffSidebar = ({ setActiveComponent }) => {
             {item.name}
           </button>
         ))}
-        <button
-          className="w-full flex items-center px-6 py-3 mt-4 text-gray-700 hover:bg-pink-100 hover:text-pink-500 transition duration-200 rounded-lg"
-          onClick={handleLogout}
-        >
-          <FaSignOutAlt className="mr-3 text-pink-500" />
-          Logout
-        </button>
       </nav>
     </div>
   );
