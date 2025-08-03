@@ -1,51 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaGift } from 'react-icons/fa';
-
-// Sample promotions data (replace with API call in production)
-const promotions = [
-  {
-    id: 1,
-    title: '20% Off Spa Treatments',
-    description: 'Indulge in a luxurious spa experience this month! Book any spa treatment and save 20%.',
-    validUntil: 'July 31, 2025',
-    service: 'Facial Treatment', // Optional: for pre-filling Book Appointment
-    image: '/assets/customer/spa.jpg', // Absolute path in public folder
-  },
-  {
-    id: 2,
-    title: 'Free Manicure with Haircut',
-    description: 'Get a complimentary manicure when you book a haircut and styling session.',
-    validUntil: 'August 15, 2025',
-    service: 'Haircut & Styling',
-    image: '/assets/customer/manicure.jpg'
-  },
-  {
-    id: 3,
-    title: 'Summer Glow Package',
-    description: 'Enjoy a facial, massage, and pedicure for a special bundle price of $120.',
-    validUntil: 'August 31, 2025',
-    service: 'Massage Therapy',
-    image: '/assets/customer/summer_glow.jpg',
-  },
-  {
-    id: 4,
-    title: 'Loyalty Discount',
-    description: 'Book your 5th appointment and receive 15% off any service of your choice.',
-    validUntil: 'December 31, 2025',
-    service: null, // No specific service
-    image: '/assets/customer/discount.jpg',
-  },
-];
+import axios from '../../api/axios';
 
 const Promotions = ({ setActiveComponent }) => {
-  const handleBookNow = (service) => {
+  const [promotions, setPromotions] = useState([]);
+  const [error, setError] = useState(null);
+
+  // Fetch active promotions
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const response = await axios.get('/api/promotions/active-promotions');
+        setPromotions(response.data.promotions);
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to fetch promotions');
+      }
+    };
+    fetchPromotions();
+  }, []);
+
+  const handleBookNow = (serviceId) => {
     if (setActiveComponent) {
-      setActiveComponent('Book Appointment');
-      // Optionally pass service to pre-fill form in Appointments.jsx
-      console.log('Navigate to Book Appointment with service:', service);
+      setActiveComponent('Book Appointment', { serviceId });
+      console.log('Navigate to Book Appointment with service_id:', serviceId);
     }
   };
-
+ const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
   return (
     <div className="p-6 sm:p-10 font-poppins bg-gradient-to-br from-pink-50 to-white">
       <style>
@@ -72,41 +58,59 @@ const Promotions = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Discover exclusive deals and special offers to enhance your salon experience.
       </p>
-      
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <div className="promotions-scroll">
         {promotions.length === 0 ? (
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 text-center">
             <p className="text-gray-600 text-lg">No promotions available at this time. Check back soon!</p>
             <button
               className="mt-4 bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 transition font-poppins"
-              onClick={() => setActiveComponent('Explore Services')}
+              onClick={() => setActiveComponent('Book Appointment')}
             >
-              Browse Services
+              Book Appointment
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {promotions.map((promo) => (
               <div
-                key={promo.id}
+                key={promo.promo_id}
                 className="bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
               >
                 <div className="relative h-48">
                   <img
-                    src={promo.image}
+                    src={promo.image || 'https://placehold.co/300x200?text=Promo'}
                     alt={promo.title}
                     className="w-full h-full object-cover"
-                    onError={(e) => (e.target.src = 'https://via.placeholder.com/300x200?text=' + promo.title)}
+                    onError={(e) => (e.target.src = 'https://placehold.co/300x200?text=Promo')}
                   />
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-semibold text-pink-700 mb-2">{promo.title}</h3>
-                  <p className="text-gray-600 text-base mb-3">{promo.description}</p>
+                  <p className="text-gray-600 text-base mb-3">{promo.description || 'No description available'}</p>
+                  <p className="text-gray-600 text-sm mb-2">
+                    Code: <span className="font-medium text-pink-500">{promo.code}</span>
+                  </p>
+                  <p className="text-gray-600 text-sm mb-2">
+                    Discount:{' '}
+                    <span className="font-medium text-pink-500">
+                      {promo.discount_type === 'percentage'
+                        ? `${promo.value}% off`
+                        : `$${promo.value} off`}
+                    </span>
+                  </p>
+                  <p className="text-gray-600 text-sm mb-2">
+                    Service: <span className="font-medium text-pink-500">{promo.service_name}</span>
+                  </p>
+                  <p className="text-gray-600 text-sm mb-2">
+                    Valid: <span className="font-medium text-pink-500">for {formatDate(promo.start_date)} to {formatDate(promo.end_date)}</span>
+                  </p>
                   <p className="text-gray-600 text-sm mb-4">
-                    Valid until: <span className="font-medium text-pink-500">{promo.validUntil}</span>
+                    Usage Limit: <span className="font-medium text-pink-500">{promo.usage_limit}</span>
                   </p>
                   <button
                     className="w-full bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 transition font-poppins"
-                    onClick={() => handleBookNow(promo.service)}
+                    onClick={() => handleBookNow(promo.service_id)}
                   >
                     Book Now
                   </button>
@@ -115,7 +119,7 @@ const Promotions = ({ setActiveComponent }) => {
             ))}
           </div>
         )}
-      
+      </div>
     </div>
   );
 };
