@@ -1,23 +1,80 @@
 import React from 'react';
-import { FaHome } from 'react-icons/fa';
+import { FaCut, FaSpa, FaPaintBrush, FaHands, FaMedal } from 'react-icons/fa';
 
-const StaffHome = ({ staff }) => (
-  <div className="p-6 sm:p-10 font-poppins bg-gradient-to-br from-pink-50 to-white">
-    <h2 className="text-3xl sm:text-4xl font-extrabold text-pink-700 mb-6 flex items-center">
-      <FaHome className="mr-3 text-pink-500" /> Welcome, {staff.name}!
-    </h2>
-    <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100">
-      <p className="text-gray-700 text-lg mb-4">
-        This is your staff dashboard. Use the sidebar to set your attendance, view assigned appointments, or check the service list.
-      </p>
-      <p className="text-gray-700">
-        <strong>Role:</strong> {staff.role}
-      </p>
-      <p className="text-gray-700">
-        <strong>Email:</strong> {staff.email}
-      </p>
+// Sample service data (replace with API call in production)
+const services = [
+  {
+    id: 1,
+    title: 'Haircut & Styling',
+    description: 'Transform your look with a personalized haircut and professional styling.',
+    price: '$50',
+    icon: <FaCut className="w-8 h-8 text-pink-500" />,
+    image: '/assets/customer/haircut.jpg', // Absolute path in public folder
+  },
+  {
+    id: 2,
+    title: 'Manicure & Pedicure',
+    description: 'Indulge in a luxurious nail treatment for perfectly polished hands and feet.',
+    price: '$40',
+    icon: <FaHands className="w-8 h-8 text-pink-500" />,
+    image: '/assets/customer/manicure.jpg',
+  },
+  {
+    id: 3,
+    title: 'Facial Treatment',
+    description: 'Rejuvenate your skin with our deep-cleansing and hydrating facial.',
+    price: '$60',
+    icon: <FaSpa className="w-8 h-8 text-pink-500" />,
+    image: '/assets/customer/facial_treatment.jpg',
+  },
+];
+
+const Services = ({ setActiveComponent }) => {
+  // Handle Book Now button click
+  const handleBookNow = (serviceTitle) => {
+    if (setActiveComponent) {
+      setActiveComponent('Book Appointment');
+      console.log('Navigate to Book Appointment with service:', serviceTitle);
+    }
+  };
+
+  return (
+    <div className="p-6 sm:p-10 font-poppins bg-gradient-to-br from-pink-50 to-white">
+     
+      <h2 className="text-3xl sm:text-4xl font-bold text-pink-700 mb-6 flex items-center">
+        <FaMedal className="mr-3 text-pink-500" /> The work you completed YesterDay,
+      </h2>
+      
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {services.map((service) => (
+            <div
+              key={service.id}
+              className="bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
+            >
+              <div className="relative h-48">
+                <img
+                  src={service.image}
+                  alt={service.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => (e.target.src = `https://via.placeholder.com/300x200?text=${service.title}`)}
+                />
+              </div>
+              <div className="p-6">
+                <div className="flex items-center mb-3">
+                  {service.icon}
+                  <h3 className="ml-3 text-xl font-semibold text-pink-700">{service.title}</h3>
+                </div>
+                <p className="text-gray-700 text-base mb-4">{service.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-pink-500 font-medium">{service.price}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      
     </div>
-  </div>
-);
+  );
+};
 
-export default StaffHome;
+export default Services;
