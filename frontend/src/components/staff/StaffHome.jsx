@@ -6,7 +6,6 @@ const services = [
   {
     id: 1,
     title: 'Haircut & Styling',
-    description: 'Transform your look with a personalized haircut and professional styling.',
     price: '$50',
     icon: <FaCut className="w-8 h-8 text-pink-500" />,
     image: '/assets/customer/haircut.jpg', // Absolute path in public folder
@@ -59,21 +58,17 @@ const Services = ({ setActiveComponent }) => {
                   onError={(e) => (e.target.src = `https://via.placeholder.com/300x200?text=${service.title}`)}
                 />
               </div>
-              <div className="p-6">
-                <div className="flex items-center mb-3">
+              <div className="p-5">
+                <span className="text-pink-500 font-medium px-75">{service.price}</span>
+                <div className="flex items-center mb-0 px-3">
                   {service.icon}
-                  <h3 className="ml-3 text-xl font-semibold text-pink-700">{service.title}</h3>
-                </div>
-                <p className="text-gray-700 text-base mb-4">{service.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-pink-500 font-medium">{service.price}</span>
-                </div>
+                  <h3 className="ml-3 text-xl font-semibold text-pink-700">{service.title}</h3>   
+                </div>                
               </div>
             </div>
           ))}
         </div>
-      
-    </div>
+      </div>
   );
 };
 
