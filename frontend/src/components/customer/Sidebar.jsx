@@ -30,7 +30,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
 
   return (
     <aside
-      className={`fixed top-16 bottom-0 w-64 bg-gradient-to-br from-pink-50 to-white shadow-xl transform lg:transform-none ${
+      className={`fixed top-25 bottom-0 w-64 bg-gradient-to-br from-pink-50 to-white shadow-xl transform lg:transform-none ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } transition-transform duration-300 z-20 overflow-y-auto`}
     >
@@ -52,11 +52,8 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
           }
         `}
       </style>
-      <div className="p-6 font-poppins sidebar-scroll">
-        <h2 className="text-2xl font-bold text-pink-700 mb-8 text-center">
-          Dashboard
-        </h2>
-        <nav className="space-y-3">
+      <div className="p-10 font-poppins sidebar-scroll">
+        <nav className="space-y-5">
           {navItems.map((item) => (
             <div key={item.name}>
               {item.dropdown ? (

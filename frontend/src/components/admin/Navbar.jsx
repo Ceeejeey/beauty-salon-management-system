@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaBars, FaBell, FaUser, FaCog, FaSignOutAlt } from 'react-icons/fa';
+import { FaBars, FaBell, FaCog, FaSignOutAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const AdminNavbar = ({ setIsSidebarOpen, isSidebarOpen, setActiveComponent }) => {
@@ -26,12 +26,6 @@ const AdminNavbar = ({ setIsSidebarOpen, isSidebarOpen, setActiveComponent }) =>
             onClick={handleNotificationClick}
           >
             <FaBell className="text-xl" />
-          </button>
-          <button
-            className="text-pink-500 hover:text-pink-600 transition"
-            onClick={() => setActiveComponent('Profile')}
-          >
-            <FaUser className="text-xl" />
           </button>
           <button
             className="text-pink-500 hover:text-pink-600 transition"

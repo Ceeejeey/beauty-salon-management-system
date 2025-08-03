@@ -19,7 +19,6 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
 
   const profileItems = [
     { name: 'Profile', component: 'Profile', icon: <FaUserCircle /> },
-    { name: 'Settings', component: 'Settings', icon: <FaCog /> },
     { name: 'Logout', component: null, icon: <FaSignOutAlt />, path: '/signin' },
   ];
 
