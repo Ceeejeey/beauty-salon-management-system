@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaBookmark, FaBookOpen, FaBookReader, FaCalendarAlt, FaLock, FaRegBookmark, FaUserAlt } from 'react-icons/fa';
 import Sidebar from '../../components/customer/Sidebar';
+import Feedback from '../../components/customer/Feedback';
 import Navbar from '../../components/customer/Navbar';
 import BookAppointment from '../../components/customer/Appoinments';
 import CloseAppointment from '../../components/customer/CloseAppointment';
@@ -415,6 +416,7 @@ const Dashboard = () => {
     'Book Appointment': () => <BookAppointment setActiveComponent={setActiveComponent} />,
     'Close Appointment': () => <CloseAppointment />,
     'Appointment History': () => <AppointmentHistory />,
+    Feedback: () => <Feedback setActiveComponent={setActiveComponent} />,
     'Explore Services': () => <Services setActiveComponent={setActiveComponent} />,
     'Promotions and Offers': () => <Promotions setActiveComponent={setActiveComponent} />,
     Profile: () => <Profile setActiveComponent={setActiveComponent} />,

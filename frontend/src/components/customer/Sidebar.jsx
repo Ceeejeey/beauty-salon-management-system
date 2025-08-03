@@ -13,6 +13,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
         { name: 'Book Appointment', component: 'Book Appointment' },
         { name: 'Close Appointment', component: 'Close Appointment' },
         { name: 'Appointment History', component: 'Appointment History' },
+        { name: 'Feedback', component: 'Feedback' },
       ],
     },
     { name: 'Explore Services', icon: <FaConciergeBell />, component: 'Explore Services' },
