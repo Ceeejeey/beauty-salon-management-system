@@ -25,7 +25,30 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 }).single('image');
 
-
+// Get all active promotions (public)
+const getActivePromotions = async (req, res) => {
+  try {
+    const [promotions] = await pool.execute(
+      `SELECT p.promo_id, p.service_id, s.name AS service_name, p.title, p.code, p.description, 
+              p.discount_type, p.value, p.start_date, p.end_date, p.usage_limit, p.image
+       FROM promotions p
+       JOIN services s ON p.service_id = s.service_id
+       WHERE p.start_date <= CURDATE() AND p.end_date >= CURDATE() AND p.usage_limit > 0`
+    );
+    // Convert images to base64
+    const formattedPromotions = promotions.map((promo) => ({
+      ...promo,
+      image: promo.image ? `data:image/jpeg;base64,${Buffer.from(promo.image).toString('base64')}` : null,
+    }));
+    res.status(200).json({
+      message: 'Active promotions retrieved successfully',
+      promotions: formattedPromotions,
+    });
+  } catch (error) {
+    console.error('Get promotions error:', error);
+    res.status(500).json({ error: 'Server error during promotions retrieval' });
+  }
+};
 // Create promotion
 const createPromotion = async (req, res) => {
   upload(req, res, async (err) => {
@@ -300,4 +323,5 @@ module.exports = {
   getPromotionById: [getPromotionById],
   updatePromotion: [updatePromotion],
   deletePromotion: [deletePromotion],
+  getActivePromotions: [getActivePromotions],
 };
