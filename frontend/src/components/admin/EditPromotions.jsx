@@ -1,59 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { FaTag, FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
-import axios from 'axios';
-
-// Sample promotions data with images (replace with API call)
-const initialPromotions = [
-  {
-    id: 1,
-    title: 'Summer Glow Discount',
-    description: '20% off on all hair services.',
-    discountType: 'Percentage',
-    discountValue: 20,
-    validFrom: '2025-07-01',
-    validUntil: '2025-07-31',
-    image: '/assets/promotions/summer_glow.jpg',
-  },
-  {
-    id: 2,
-    title: 'Spa Day Special',
-    description: '$10 off on any facial treatment.',
-    discountType: 'Fixed',
-    discountValue: 10,
-    validFrom: '2025-07-15',
-    validUntil: '2025-08-15',
-    image: '/assets/promotions/spa_day.jpg',
-  },
-  {
-    id: 3,
-    title: 'Nail Bliss Promo',
-    description: '15% off on manicure and pedicure combo.',
-    discountType: 'Percentage',
-    discountValue: 15,
-    validFrom: '2025-07-19',
-    validUntil: '2025-08-01',
-    image: '/assets/promotions/nail_bliss.jpg',
-  },
-];
+import axios from '../../api/axios';
+import { jwtDecode } from 'jwt-decode';
 
 const EditPromotions = ({ setActiveComponent }) => {
-  const [promotions, setPromotions] = useState(initialPromotions);
+  const [promotions, setPromotions] = useState([]);
+  const [services, setServices] = useState([]);
   const [formData, setFormData] = useState({
     id: null,
+    service_id: '',
     title: '',
+    code: '',
     description: '',
     discountType: '',
-    discountValue: '',
-    validFrom: '',
-    validUntil: '',
+    value: '',
+    startDate: '',
+    endDate: '',
+    usageLimit: '',
     image: null,
   });
   const [isEditing, setIsEditing] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Fetch promotions (placeholder for API call)
+  // Fetch promotions and services
   useEffect(() => {
-    // axios.get('/api/promotions').then((response) => setPromotions(response.data));
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Please log in as an admin to manage promotions');
+          return;
+        }
+        const decoded = jwtDecode(token);
+        if (decoded.role !== 'admin') {
+          setError('Access restricted to admins');
+          return;
+        }
+
+        const [promoResponse, serviceResponse] = await Promise.all([
+          axios.get('/api/promotions/get-promotions', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('/api/services/get-services', { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        setPromotions(promoResponse.data.promotions);
+        setServices(serviceResponse.data.services);
+        setSuccess(promoResponse.data.message);
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to fetch data');
+      }
+    };
+    fetchData();
   }, []);
 
   // Handle form input changes
@@ -72,84 +69,100 @@ const EditPromotions = ({ setActiveComponent }) => {
   // Handle form submission (add/edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccess(null);
+    setError(null);
+
+    // Client-side validation
+    if (!formData.service_id || !formData.title || !formData.code || !formData.discountType || !formData.value || !formData.startDate || !formData.endDate || !formData.usageLimit) {
+      setError('All fields except image are required');
+      return;
+    }
+    if (!/^[A-Z0-9]+$/.test(formData.code)) {
+      setError('Code must be uppercase alphanumeric');
+      return;
+    }
+    if (isNaN(formData.value) || formData.value <= 0) {
+      setError('Discount value must be a positive number');
+      return;
+    }
+    if (isNaN(formData.usageLimit) || formData.usageLimit <= 0) {
+      setError('Usage limit must be a positive integer');
+      return;
+    }
+    if (new Date(formData.startDate) >= new Date(formData.endDate)) {
+      setError('End date must be after start date');
+      return;
+    }
+
     const data = new FormData();
+    data.append('service_id', parseInt(formData.service_id));
     data.append('title', formData.title);
-    data.append('description', formData.description);
-    data.append('discountType', formData.discountType);
-    data.append('discountValue', parseFloat(formData.discountValue));
-    data.append('validFrom', formData.validFrom);
-    data.append('validUntil', formData.validUntil);
-    if (formData.image) data.append('image', formData.image);
+    data.append('code', formData.code);
+    data.append('description', formData.description || '');
+    data.append('discount_type', formData.discountType);
+    data.append('value', parseFloat(formData.value));
+    data.append('start_date', formData.startDate);
+    data.append('end_date', formData.endDate);
+    data.append('usage_limit', parseInt(formData.usageLimit));
+    if (formData.image) {
+      data.append('image', formData.image);
+    } else if (isEditing && !formData.image) {
+      data.append('image', 'null');
+    }
 
     try {
+      const token = localStorage.getItem('token');
       if (isEditing) {
-        // Update promotion (placeholder)
-        // await axios.put(`/api/promotions/${formData.id}`, data, {
-        //   headers: { 'Content-Type': 'multipart/form-data' },
-        // });
+        const response = await axios.put(`/api/promotions/update-promotion/${formData.id}`, data, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+        });
         setPromotions(
           promotions.map((promo) =>
-            promo.id === formData.id
-              ? {
-                  ...promo,
-                  title: formData.title,
-                  description: formData.description,
-                  discountType: formData.discountType,
-                  discountValue: parseFloat(formData.discountValue),
-                  validFrom: formData.validFrom,
-                  validUntil: formData.validUntil,
-                  image: imagePreview || promo.image,
-                }
-              : promo
+            promo.promo_id === formData.id ? response.data.promotion : promo
           )
         );
-        console.log('Promotion updated:', formData);
+        setSuccess('Promotion updated successfully');
       } else {
-        // Add promotion (placeholder)
-        // await axios.post('/api/promotions', data, {
-        //   headers: { 'Content-Type': 'multipart/form-data' },
-        // });
-        const newPromotion = {
-          id: promotions.length + 1,
-          title: formData.title,
-          description: formData.description,
-          discountType: formData.discountType,
-          discountValue: parseFloat(formData.discountValue),
-          validFrom: formData.validFrom,
-          validUntil: formData.validUntil,
-          image: imagePreview || '/assets/promotions/placeholder.jpg',
-        };
-        setPromotions([...promotions, newPromotion]);
-        console.log('Promotion added:', newPromotion);
+        const response = await axios.post('/api/promotions/create-promotion', data, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+        });
+        setPromotions([...promotions, response.data.promotion]);
+        setSuccess('Promotion created successfully');
       }
       // Reset form
       setFormData({
         id: null,
+        service_id: '',
         title: '',
+        code: '',
         description: '',
         discountType: '',
-        discountValue: '',
-        validFrom: '',
-        validUntil: '',
+        value: '',
+        startDate: '',
+        endDate: '',
+        usageLimit: '',
         image: null,
       });
       setImagePreview(null);
       setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving promotion:', error);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save promotion');
     }
   };
 
   // Handle edit button click
   const handleEdit = (promotion) => {
     setFormData({
-      id: promotion.id,
+      id: promotion.promo_id,
+      service_id: promotion.service_id,
       title: promotion.title,
-      description: promotion.description,
-      discountType: promotion.discountType,
-      discountValue: promotion.discountValue.toString(),
-      validFrom: promotion.validFrom,
-      validUntil: promotion.validUntil,
+      code: promotion.code,
+      description: promotion.description || '',
+      discountType: promotion.discount_type,
+      value: promotion.value.toString(),
+      startDate: promotion.start_date,
+      endDate: promotion.end_date,
+      usageLimit: promotion.usage_limit.toString(),
       image: null,
     });
     setImagePreview(promotion.image);
@@ -159,12 +172,23 @@ const EditPromotions = ({ setActiveComponent }) => {
   // Handle delete button click
   const handleDelete = async (id) => {
     try {
-      // await axios.delete(`/api/promotions/${id}`);
-      setPromotions(promotions.filter((promo) => promo.id !== id));
-      console.log('Promotion deleted:', id);
-    } catch (error) {
-      console.error('Error deleting promotion:', error);
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/promotions/delete-promotion/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPromotions(promotions.filter((promo) => promo.promo_id !== id));
+      setSuccess('Promotion deleted successfully');
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete promotion');
     }
+  };
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
   };
 
   return (
@@ -188,6 +212,20 @@ const EditPromotions = ({ setActiveComponent }) => {
           .table-container {
             overflow-x: auto;
           }
+          .table-container::-webkit-scrollbar {
+            height: 8px;
+          }
+          .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+          .table-container::-webkit-scrollbar-thumb {
+            background: #ec4899; /* pink-500 */
+            border-radius: 4px;
+          }
+          .table-container::-webkit-scrollbar-thumb:hover {
+            background: #db2777; /* pink-600 */
+          }
         `}
       </style>
       <h2 className="text-3xl sm:text-4xl font-extrabold text-pink-700 mb-6 flex items-center">
@@ -196,13 +234,34 @@ const EditPromotions = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Manage promotional offers for your salon. Add new promotions with images or edit existing ones.
       </p>
-      
+      {success && <div className="text-green-500 mb-4">{success}</div>}
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <div className="promotions-scroll">
         {/* Add/Edit Promotion Form */}
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
           <h3 className="text-2xl font-semibold text-pink-700 mb-4">
             {isEditing ? 'Edit Promotion' : 'Add New Promotion'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Service</label>
+              <select
+                name="service_id"
+                value={formData.service_id}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                required
+              >
+                <option value="" disabled>
+                  Select Service
+                </option>
+                {services.map((service) => (
+                  <option key={service.service_id} value={service.service_id}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="block text-gray-700 font-medium mb-1">Title</label>
               <input
@@ -216,6 +275,20 @@ const EditPromotions = ({ setActiveComponent }) => {
               />
             </div>
             <div>
+              <label className="block text-gray-700 font-medium mb-1">Code</label>
+              <input
+                type="text"
+                name="code"
+                value={formData.code}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                placeholder="Enter promotion code (e.g., SUMMER20)"
+                pattern="[A-Z0-9]+"
+                title="Code must be uppercase alphanumeric"
+                required
+              />
+            </div>
+            <div>
               <label className="block text-gray-700 font-medium mb-1">Description</label>
               <textarea
                 name="description"
@@ -224,7 +297,6 @@ const EditPromotions = ({ setActiveComponent }) => {
                 className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                 placeholder="Enter promotion description"
                 rows="4"
-                required
               />
             </div>
             <div>
@@ -239,42 +311,58 @@ const EditPromotions = ({ setActiveComponent }) => {
                 <option value="" disabled>
                   Select Discount Type
                 </option>
-                <option value="Percentage">Percentage (%)</option>
-                <option value="Fixed">Fixed Amount ($)</option>
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed Amount ($)</option>
               </select>
             </div>
             <div>
               <label className="block text-gray-700 font-medium mb-1">Discount Value</label>
               <input
                 type="number"
-                name="discountValue"
-                value={formData.discountValue}
+                name="value"
+                value={formData.value}
                 onChange={handleInputChange}
                 className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                 placeholder="Enter discount value"
                 step="0.01"
+                min="0.01"
                 required
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Valid From</label>
+              <label className="block text-gray-700 font-medium mb-1">Start Date</label>
               <input
                 type="date"
-                name="validFrom"
-                value={formData.validFrom}
+                name="startDate"
+                value={formData.startDate}
                 onChange={handleInputChange}
+                min="2025-08-03"
                 className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                 required
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Valid Until</label>
+              <label className="block text-gray-700 font-medium mb-1">End Date</label>
               <input
                 type="date"
-                name="validUntil"
-                value={formData.validUntil}
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleInputChange}
+                min="2025-08-03"
+                className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Usage Limit</label>
+              <input
+                type="number"
+                name="usageLimit"
+                value={formData.usageLimit}
                 onChange={handleInputChange}
                 className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                placeholder="Enter usage limit"
+                min="1"
                 required
               />
             </div>
@@ -282,7 +370,7 @@ const EditPromotions = ({ setActiveComponent }) => {
               <label className="block text-gray-700 font-medium mb-1">Promotion Image</label>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png"
                 onChange={handleImageChange}
                 className="w-full p-3 border border-pink-200 rounded-lg"
               />
@@ -308,16 +396,21 @@ const EditPromotions = ({ setActiveComponent }) => {
                   onClick={() => {
                     setFormData({
                       id: null,
+                      service_id: '',
                       title: '',
+                      code: '',
                       description: '',
                       discountType: '',
-                      discountValue: '',
-                      validFrom: '',
-                      validUntil: '',
+                      value: '',
+                      startDate: '',
+                      endDate: '',
+                      usageLimit: '',
                       image: null,
                     });
                     setImagePreview(null);
                     setIsEditing(false);
+                    setSuccess(null);
+                    setError(null);
                   }}
                 >
                   Cancel
@@ -339,42 +432,48 @@ const EditPromotions = ({ setActiveComponent }) => {
             </button>
           </div>
         ) : (
-          <div className="table-container">
+          
             <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
               <thead>
                 <tr className="bg-pink-100 text-pink-700">
                   <th className="px-6 py-4 text-left font-semibold text-base">Image</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Service</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Title</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Code</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Description</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Discount</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Valid From</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Valid Until</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Start Date</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">End Date</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Usage Limit</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {promotions.map((promotion) => (
                   <tr
-                    key={promotion.id}
+                    key={promotion.promo_id}
                     className="border-t border-pink-100 hover:bg-pink-50 transition duration-200"
                   >
                     <td className="px-6 py-4">
                       <img
-                        src={promotion.image}
+                        src={promotion.image || 'https://placehold.co/100x100?text=Promo'}
                         alt={promotion.title}
                         className="w-16 h-16 object-cover rounded-lg"
-                        onError={(e) => (e.target.src = 'https://via.placeholder.com/100x100?text=Promo')}
+                        onError={(e) => (e.target.src = 'https://placehold.co/100x100?text=Promo')}
                       />
                     </td>
+                    <td className="px-6 py-4 text-gray-700">{promotion.service_name}</td>
                     <td className="px-6 py-4 text-gray-700">{promotion.title}</td>
-                    <td className="px-6 py-4 text-gray-700">{promotion.description}</td>
+                    <td className="px-6 py-4 text-gray-700">{promotion.code}</td>
+                    <td className="px-6 py-4 text-gray-700">{promotion.description || 'N/A'}</td>
                     <td className="px-6 py-4 text-pink-500 font-medium">
-                      {promotion.discountType === 'Percentage'
-                        ? `${promotion.discountValue}% off`
-                        : `$${promotion.discountValue.toFixed(2)} off`}
+                      {promotion.discount_type === 'percentage'
+                        ? `${promotion.value}% off`
+                        : `$${promotion.value} off`}
                     </td>
-                    <td className="px-6 py-4 text-pink-500 font-medium">{promotion.validFrom}</td>
-                    <td className="px-6 py-4 text-pink-500 font-medium">{promotion.validUntil}</td>
+                    <td className="px-6 py-4 text-pink-500 font-medium">{formatDate(promotion.start_date)}</td>
+                    <td className="px-6 py-4 text-pink-500 font-medium">{formatDate(promotion.end_date)}</td>
+                    <td className="px-6 py-4 text-gray-700">{promotion.usage_limit}</td>
                     <td className="px-6 py-4 flex space-x-2">
                       <button
                         className="text-pink-500 hover:text-pink-600 transition"
@@ -384,7 +483,7 @@ const EditPromotions = ({ setActiveComponent }) => {
                       </button>
                       <button
                         className="text-pink-500 hover:text-pink-600 transition"
-                        onClick={() => handleDelete(promotion.id)}
+                        onClick={() => handleDelete(promotion.promo_id)}
                       >
                         <FaTrash className="text-lg" />
                       </button>
@@ -393,7 +492,7 @@ const EditPromotions = ({ setActiveComponent }) => {
                 ))}
               </tbody>
             </table>
-          </div>
+          
         )}
         <div className="mt-8 text-center">
           <button
@@ -404,7 +503,7 @@ const EditPromotions = ({ setActiveComponent }) => {
           </button>
         </div>
       </div>
-    
+    </div>
   );
 };
 
