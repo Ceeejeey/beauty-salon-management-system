@@ -7,6 +7,9 @@ import ManageStaff from '../../components/admin/ManageStaff';
 import TrackExpenses from '../../components/admin/TrackExpenses';
 import EditPromotions from '../../components/admin/EditPromotions';
 import AdminSettings from '../../components/admin/AdminSettings';
+import GenerateInvoice from '../../components/admin/GenerateInvoice';
+import AdminFeedback from '../../components/admin/AdminFeedbacks';
+
 
 const AdminHome = ({ setActiveComponent }) => (
   <div className="p-6 sm:p-10 font-poppins bg-gradient-to-br from-pink-50 to-white">
@@ -63,6 +66,8 @@ const AdminDashboard = () => {
     'Edit and Make Promotions': () => <EditPromotions setActiveComponent={setActiveComponent} />,
     'Profile': () => <AdminProfile setActiveComponent={setActiveComponent} />,
     'Settings': () => <AdminSettings setActiveComponent={setActiveComponent} />,
+    'Generate Invoice': () => <GenerateInvoice setActiveComponent={setActiveComponent} />,
+    'Admin Feedbacks': () => <AdminFeedback setActiveComponent={setActiveComponent} />,
   };
 
   const ActiveComponent = componentMap[activeComponent] || AdminHome;

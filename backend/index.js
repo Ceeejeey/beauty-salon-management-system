@@ -6,7 +6,8 @@ const staffRoutes = require('./routes/staffRoutes');
 const serviceRoutes = require('./routes/serviceRouter');
 const promotionsRoutes = require('./routes/promotionsRouter'); 
 const invoiceRoutes = require('./routes/invoiceRouter');
-const expenseRoutes = require('./routes/expenseRouter'); // Assuming you have an expenseRouter
+const expenseRoutes = require('./routes/expenseRouter'); 
+const feedbackRoutes = require('./routes/feedbackRouter'); // Assuming you have a feedbackRouter
 const app = express();
 const server = require('http').createServer(app);
 const cors = require('cors');
@@ -24,6 +25,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/promotions', promotionsRoutes); // Assuming you have a promotionsRouter
 app.use('/api/invoices', invoiceRoutes); // Add invoice routes
 app.use('/api/expenses', expenseRoutes); // Add expense routes
+app.use('/api/feedback', feedbackRoutes); // Add feedback routes
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {

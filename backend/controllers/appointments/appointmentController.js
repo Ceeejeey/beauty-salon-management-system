@@ -459,6 +459,33 @@ const getCompletedAppointments = async (req, res) => {
     res.status(500).json({ error: 'Server error during appointments retrieval' });
   }
 };
+const getStaffAppointments = async (req, res) => {
+  const { staffId } = req.params;
+  try {
+    const userId = req.user.user_id;
+    if (parseInt(staffId) !== userId) {
+      return res.status(403).json({ error: 'Access restricted to your own appointments' });
+    }
+    const [appointments] = await pool.execute(
+      `SELECT a.appointment_id, a.service_id, a.customer_id, a.staff_id, a.appointment_date, a.appointment_time, a.status,
+              s.name AS service_name, st.name AS staff_name, u.name AS customer_name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       JOIN staff st ON a.staff_id = st.user_id
+       JOIN users u ON a.customer_id = u.user_id
+       WHERE a.staff_id = ? AND a.status IN ('Confirmed', 'Completed')
+       ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
+      [staffId]
+    );
+    res.status(200).json({
+      message: 'Staff appointments retrieved successfully',
+      appointments,
+    });
+  } catch (error) {
+    console.error('Get staff appointments error:', error);
+    res.status(500).json({ error: 'Server error during appointment retrieval' });
+  }
+};
 
 module.exports = {
   createAppointment: [createAppointment],
@@ -472,4 +499,5 @@ module.exports = {
   getPendingAppointments: [getPendingAppointments],
   getAppointments: [getAppointments],
   getCompletedAppointments: [getCompletedAppointments],
+  getStaffAppointments: [getStaffAppointments],
 };

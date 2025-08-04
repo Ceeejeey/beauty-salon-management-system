@@ -1,37 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { FaStar, FaPlus, FaHome } from 'react-icons/fa';
+import { jwtDecode } from 'jwt-decode';
+import axios from '../../api/axios';
 
 const Feedback = ({ setActiveComponent }) => {
   const [appointments, setAppointments] = useState([]);
   const [feedbackData, setFeedbackData] = useState({});
   const [formData, setFormData] = useState({
-    appointment_id: null, // Retained for backend compatibility; set to null as text input is used
-    appointment_details: '', // New field for free-form appointment input
+    appointment_id: '',
     rating: '',
     comments: '',
   });
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
+  const [customerId, setCustomerId] = useState(null);
 
-  // Fetch completed appointments and feedback (retained for state consistency)
+  // Format date for display
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      timeZone: 'Asia/Colombo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
+
+  // Fetch customer ID, completed appointments, and feedback
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Get customer ID from token
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Please log in to view your appointments');
+          return;
+        }
+        const decoded = jwtDecode(token);
+        const customer = decoded.user_id;
+        console.log('Customer ID:', customer);
+        setCustomerId(customer);
+
         // Fetch completed appointments
-        const apptResponse = await axios.get('/api/appointments', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        const apptResponse = await axios.get(`/api/appointments/get-appointment/${customer}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        const completed = apptResponse.data.appointments.filter((appt) => appt.status === 'Completed');
-        setAppointments(completed);
+        const completedAppointments = Array.isArray(apptResponse.data.appointments)
+          ? apptResponse.data.appointments.filter((appt) => appt.status === 'Completed')
+          : [];
+        setAppointments(completedAppointments);
 
         // Fetch feedback for all appointments
-        const feedbackResponse = await axios.get('/api/feedback', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        const feedbackResponse = await axios.get('/api/feedback/get-feedback', {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        const feedbackMap = feedbackResponse.data.feedback.reduce((map, fb) => ({
-          ...map,
-          [fb.appointment_id]: fb,
-        }), {});
+        const feedbackMap = feedbackResponse.data.feedback.reduce(
+          (map, fb) => ({
+            ...map,
+            [fb.appointment_id]: fb,
+          }),
+          {}
+        );
         setFeedbackData(feedbackMap);
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to fetch data');
@@ -48,7 +76,7 @@ const Feedback = ({ setActiveComponent }) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'rating' ? parseInt(value) || '' : value,
+      [name]: name === 'rating' || name === 'appointment_id' ? parseInt(value) || '' : value,
     }));
   };
 
@@ -57,18 +85,18 @@ const Feedback = ({ setActiveComponent }) => {
     setSuccess(null);
     setError(null);
 
-    if (!formData.appointment_details || !formData.rating) {
-      setError('Please enter appointment details and select a rating');
+    if (!formData.appointment_id || !formData.rating) {
+      setError('Please select an appointment and a rating');
       return;
     }
 
     try {
       const payload = {
-        appointment_id: formData.appointment_id, // Will be null; backend needs update to handle appointment_details
+        appointment_id: formData.appointment_id,
         rating: formData.rating,
         comments: formData.comments || null,
       };
-      const response = await axios.post('/api/feedback', payload, {
+      const response = await axios.post('/api/feedback/submit-feedback', payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       setFeedbackData((prev) => ({
@@ -76,7 +104,15 @@ const Feedback = ({ setActiveComponent }) => {
         [formData.appointment_id]: response.data.feedback,
       }));
       setSuccess(response.data.message);
-      setFormData({ appointment_id: null, appointment_details: '', rating: '', comments: '' });
+      setFormData({ appointment_id: '', rating: '', comments: '' });
+      // Refresh appointments to exclude those with feedback
+      const apptResponse = await axios.get(`/api/appointments/get-appointment/${customerId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      const completedAppointments = Array.isArray(apptResponse.data.appointments)
+        ? apptResponse.data.appointments.filter((appt) => appt.status === 'Completed')
+        : [];
+      setAppointments(completedAppointments);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit feedback');
       if (err.response?.status === 401) {
@@ -87,7 +123,7 @@ const Feedback = ({ setActiveComponent }) => {
   };
 
   const handleResetForm = () => {
-    setFormData({ appointment_id: null, appointment_details: '', rating: '', comments: '' });
+    setFormData({ appointment_id: '', rating: '', comments: '' });
     setSuccess(null);
     setError(null);
   };
@@ -106,7 +142,6 @@ const Feedback = ({ setActiveComponent }) => {
     }
   };
 
-  // Note: Backend expects appointment_id; it needs updating to map appointment_details to appointment_id
   return (
     <div className="p-6 sm:p-10 font-poppins bg-gradient-to-br from-pink-50 to-white">
       <style>
@@ -138,16 +173,23 @@ const Feedback = ({ setActiveComponent }) => {
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
         <form onSubmit={handleSubmitFeedback} className="space-y-6">
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Appointment Details</label>
-            <input
-              type="text"
-              name="appointment_details"
-              value={formData.appointment_details}
+            <label className="block text-gray-700 font-semibold mb-2">Select Appointment</label>
+            <select
+              name="appointment_id"
+              value={formData.appointment_id}
               onChange={handleInputChange}
               className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
-              placeholder="Enter appointment details (e.g., Haircut - 2025-07-10)"
               required
-            />
+            >
+              <option value="" disabled>Select an appointment</option>
+              {appointments
+                .filter((appt) => !feedbackData[appt.appointment_id])
+                .map((appt) => (
+                  <option key={appt.appointment_id} value={appt.appointment_id}>
+                    {appt.service_name} - {formatDate(appt.appointment_date)} {appt.appointment_time} with {appt.staff_name}
+                  </option>
+                ))}
+            </select>
           </div>
           <div>
             <label className="block text-gray-700 font-semibold mb-2">Rating (1-5)</label>
