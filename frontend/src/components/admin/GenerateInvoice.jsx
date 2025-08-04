@@ -133,6 +133,7 @@ const GenerateInvoice = ({ setActiveComponent }) => {
     doc.text(`Service: ${invoice.service_name}`, 20, 60);
     doc.text(`Staff: ${invoice.staff_name}`, 20, 70);
     doc.text(`Date: ${formatDate(invoice.date)}`, 20, 80);
+    doc.text(`Time: ${invoice.appointment_time}`, 20, 90);
     doc.text(`Payment Method: ${invoice.payment_method}`, 20, 100);
     doc.text(`Original Amount: LKR ${parseFloat(invoice.amount).toFixed(2)}`, 20, 110);
     if (invoice.promo_id) {
@@ -281,7 +282,7 @@ const GenerateInvoice = ({ setActiveComponent }) => {
                   <th className="px-6 py-4 text-left font-semibold text-base">Customer</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Staff</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Date</th>
-                  
+                  <th className="px-6 py-4 text-left font-semibold text-base">Time</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Amount (LKR)</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Promo</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Total (LKR)</th>
@@ -300,10 +301,10 @@ const GenerateInvoice = ({ setActiveComponent }) => {
                     <td className="px-6 py-4 text-gray-700">{invoice.customer_name}</td>
                     <td className="px-6 py-4 text-gray-700">{invoice.staff_name}</td>
                     <td className="px-6 py-4 text-pink-500 font-medium">{formatDate(invoice.date_issued)}</td>
-                    
+                    <td className="px-6 py-4 text-gray-700">{invoice.appointment_time}</td>
                     <td className="px-6 py-4 text-pink-500 font-medium">LKR {parseFloat(invoice.amount)}</td>
                     <td className="px-6 py-4 text-gray-700">
-                      {invoice.promo_id ? `${invoice.promo_title} (${invoice.discount_percentage}%)` : 'None'}
+                      {invoice.promo_id ? `${invoice.promo_title} ` : 'None'}
                     </td>
                     <td className="px-6 py-4 text-pink-500 font-medium">LKR {parseFloat(invoice.total_amount)}</td>
                     <td className="px-6 py-4 text-gray-700">{invoice.payment_method}</td>

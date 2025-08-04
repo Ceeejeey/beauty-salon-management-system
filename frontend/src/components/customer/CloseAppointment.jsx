@@ -16,7 +16,15 @@ const CloseAppointment = ({ setActiveComponent }) => {
     appointment_time: '',
     notes: '',
   });
-
+// Format date for display
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-CA', {
+      timeZone: 'Asia/Colombo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
   // Generate time slots (09:00 AM to 06:00 PM, hourly)
   const timeSlots = [];
   for (let hour = 9; hour <= 18; hour++) {
@@ -202,7 +210,7 @@ const CloseAppointment = ({ setActiveComponent }) => {
             >
               <h3 className="text-xl font-semibold text-pink-700 mb-2">{appointment.service_name}</h3>
               <p className="text-gray-600 text-base mb-1">
-                Date: <span className="font-medium text-pink-500">{appointment.appointment_date}</span>
+                Date: <span className="font-medium text-pink-500">{formatDate(appointment.appointment_date)}</span>
               </p>
               <p className="text-gray-600 text-base mb-1">
                 Time: <span className="font-medium text-pink-500">{formatTime(appointment.appointment_time)}</span>
