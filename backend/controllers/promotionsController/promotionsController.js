@@ -317,6 +317,8 @@ const deletePromotion = async (req, res) => {
   }
 };
 
+
+
 module.exports = {
   createPromotion: [createPromotion],
   getPromotions: [getPromotions],

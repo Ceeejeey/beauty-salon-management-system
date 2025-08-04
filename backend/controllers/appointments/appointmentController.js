@@ -436,6 +436,30 @@ const getAppointments = async (req, res) => {
   }
 };
 
+// Get completed appointments without paid invoices
+const getCompletedAppointments = async (req, res) => {
+  try {
+    const [appointments] = await pool.execute(
+      `SELECT a.appointment_id, a.service_id, a.customer_id, a.staff_id, a.appointment_date, a.appointment_time,
+              s.name AS service_name, s.price AS service_price,
+              u.name AS customer_name, st.name AS staff_name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       JOIN users u ON a.customer_id = u.user_id
+       JOIN staff st ON a.staff_id = st.user_id
+       LEFT JOIN invoices i ON a.appointment_id = i.appointment_id
+       WHERE a.status = 'Completed' AND (i.invoice_id IS NULL OR i.is_payed = 0)`
+    );
+    res.status(200).json({
+      message: 'Completed appointments without paid invoices retrieved successfully',
+      appointments,
+    });
+  } catch (error) {
+    console.error('Get completed appointments error:', error);
+    res.status(500).json({ error: 'Server error during appointments retrieval' });
+  }
+};
+
 module.exports = {
   createAppointment: [createAppointment],
   updateAppointmentforCustomer: [updateAppointmentforCustomer],
@@ -447,4 +471,5 @@ module.exports = {
   deleteAppointment: [deleteAppointment],
   getPendingAppointments: [getPendingAppointments],
   getAppointments: [getAppointments],
+  getCompletedAppointments: [getCompletedAppointments],
 };
