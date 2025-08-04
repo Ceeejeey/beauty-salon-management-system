@@ -6,7 +6,6 @@ import ViewAssignAppointments from '../../components/admin/Appointments';
 import ManageStaff from '../../components/admin/ManageStaff';
 import TrackExpenses from '../../components/admin/TrackExpenses';
 import EditPromotions from '../../components/admin/EditPromotions';
-import AdminProfile from '../../components/admin/AdminProfile';
 import AdminSettings from '../../components/admin/AdminSettings';
 
 const AdminHome = ({ setActiveComponent }) => (
