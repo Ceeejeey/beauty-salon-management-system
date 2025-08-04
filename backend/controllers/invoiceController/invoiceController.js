@@ -270,11 +270,34 @@ const deleteInvoice = async (req, res) => {
     res.status(500).json({ error: 'Server error during invoice deletion' });
   }
 };
-
+// Get paid invoices
+const getPaidInvoices = async (req, res) => {
+  try {
+    const [invoices] = await pool.execute(
+      `SELECT i.invoice_id, i.appointment_id, s.name AS service_name, c.name AS customer_name,
+              st.name AS staff_name, a.appointment_date, a.appointment_time, i.amount, i.total_amount, i.payment_method, i.date_issued
+       FROM invoices i
+       JOIN appointments a ON i.appointment_id = a.appointment_id
+       JOIN services s ON a.service_id = s.service_id
+       JOIN users c ON a.customer_id = c.user_id
+       JOIN staff st ON a.staff_id = st.user_id
+       WHERE i.is_payed = 1`
+    );
+    console.log('Paid invoices retrieved:', invoices);
+    res.status(200).json({
+      message: 'Paid invoices retrieved successfully',
+      invoices,
+    });
+  } catch (error) {
+    console.error('Get paid invoices error:', error);
+    res.status(500).json({ error: 'Server error during paid invoices retrieval' });
+  }
+};
 module.exports = {
   createInvoice: [createInvoice],
   getInvoices: [getInvoices],
   getInvoiceById: [getInvoiceById],
   updateInvoice: [updateInvoice],
   deleteInvoice: [deleteInvoice],
+  getPaidInvoices: [getPaidInvoices],
 };

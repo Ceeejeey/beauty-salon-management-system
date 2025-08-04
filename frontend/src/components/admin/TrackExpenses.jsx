@@ -1,97 +1,81 @@
 import React, { useState, useEffect } from 'react';
-import { FaDollarSign, FaEdit, FaTrash, FaPlus, FaFileInvoice } from 'react-icons/fa';
-import axios from 'axios';
-
-// Sample expenses data (replace with API call)
-const initialExpenses = [
-  {
-    id: 1,
-    date: '2025-07-19',
-    description: 'Hair Products',
-    amount: 150.00,
-    category: 'Supplies',
-  },
-  {
-    id: 2,
-    date: '2025-07-19',
-    description: 'Electricity Bill',
-    amount: 200.00,
-    category: 'Utilities',
-  },
-  {
-    id: 3,
-    date: '2025-07-18',
-    description: 'Rent',
-    amount: 1000.00,
-    category: 'Rent',
-  },
-];
-
-// Sample appointments data (replace with API call)
-const initialAppointments = [
-  {
-    id: 1,
-    service: 'Haircut & Styling',
-    customerName: 'Jane Doe',
-    date: '2025-07-19',
-    time: '2:00 PM',
-    staffId: 1,
-    staffName: 'Emma Johnson',
-    status: 'Approved',
-    price: 50.00,
-  },
-  {
-    id: 2,
-    service: 'Manicure & Pedicure',
-    customerName: 'Emily Smith',
-    date: '2025-07-19',
-    time: '10:00 AM',
-    staffId: 1,
-    staffName: 'Emma Johnson',
-    status: 'Approved',
-    price: 40.00,
-  },
-  {
-    id: 3,
-    service: 'Facial Treatment',
-    customerName: 'Sarah Brown',
-    date: '2025-07-19',
-    time: '3:00 PM',
-    staffId: 2,
-    staffName: 'Liam Davis',
-    status: 'Approved',
-    price: 60.00,
-  },
-];
+import { FaDollarSign, FaEdit, FaTrash, FaPlus, FaDownload } from 'react-icons/fa';
+import axios from '../../api/axios';
+import { jwtDecode } from 'jwt-decode';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const TrackExpenses = ({ setActiveComponent }) => {
-  const [expenses, setExpenses] = useState(initialExpenses);
-  const [appointments, setAppointments] = useState(initialAppointments);
+  const [expenses, setExpenses] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [formData, setFormData] = useState({
     id: null,
-    date: '2025-07-19',
+    date: '2025-08-04',
     description: '',
     amount: '',
     category: '',
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState('');
-  const [invoice, setInvoice] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Fetch expenses and appointments (placeholder for API calls)
+  // Get current date in Sri Lanka (2025-08-04)
+  const currentDate = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Colombo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+ const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
+  // Fetch expenses and paid invoices
   useEffect(() => {
-    // axios.get('/api/expenses').then((response) => setExpenses(response.data));
-    // axios.get('/api/appointments').then((response) => setAppointments(response.data));
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Please log in as an admin to manage expenses');
+          return;
+        }
+        const decoded = jwtDecode(token);
+        if (decoded.role !== 'admin') {
+          setError('Access restricted to admins');
+          return;
+        }
+
+        const [expensesResponse, invoicesResponse] = await Promise.all([
+          axios.get('/api/expenses/get-expenses', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('/api/invoices/get-paid-invoices', { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        setExpenses(expensesResponse.data.expenses);
+        setInvoices(invoicesResponse.data.invoices);
+        setSuccess('Data retrieved successfully');
+        console.log('Expenses:', expensesResponse.data.expenses);
+        console.log('Invoices:', invoicesResponse.data.invoices);
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to fetch data');
+      }
+    };
+    fetchData();
   }, []);
 
-  // Calculate daily financial report for today (July 19, 2025)
+  // Calculate daily financial report for today
   const getDailyReport = () => {
+    console.log('Calculating daily report for:', currentDate);
+    console.log('Expenses:', expenses);
+    console.log('expenses for today:', expenses.filter((exp) => exp.date === currentDate));
     const todayExpenses = expenses
-      .filter((exp) => exp.date === '2025-07-19')
+      .filter((exp) => formatDate(exp.date) === currentDate)
       .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-    const todayRevenue = appointments
-      .filter((appt) => appt.date === '2025-07-19' && appt.status === 'Approved')
-      .reduce((sum, appt) => sum + parseFloat(appt.price), 0);
+    console.log('Today Expenses:', todayExpenses);
+    const todayRevenue = invoices
+      .filter((inv) => formatDate(inv.date_issued) === currentDate)
+      .reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0);
     const netProfit = todayRevenue - todayExpenses;
     return { todayExpenses, todayRevenue, netProfit };
   };
@@ -105,6 +89,27 @@ const TrackExpenses = ({ setActiveComponent }) => {
   // Handle form submission (add/edit expense)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccess(null);
+    setError(null);
+
+    // Client-side validation
+    if (!formData.date || !formData.description || !formData.amount || !formData.category) {
+      setError('All fields are required');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.date)) {
+      setError('Invalid date format');
+      return;
+    }
+    if (parseFloat(formData.amount) <= 0) {
+      setError('Amount must be greater than 0');
+      return;
+    }
+    if (!['Supplies', 'Utilities', 'Rent', 'Other'].includes(formData.category)) {
+      setError('Invalid category');
+      return;
+    }
+
     const data = {
       date: formData.date,
       description: formData.description,
@@ -113,77 +118,146 @@ const TrackExpenses = ({ setActiveComponent }) => {
     };
 
     try {
+      const token = localStorage.getItem('token');
       if (isEditing) {
-        // Update expense (placeholder)
-        // await axios.put(`/api/expenses/${formData.id}`, data);
+        const response = await axios.put(`/api/expenses/update-expense/${formData.id}`, data, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setExpenses(
           expenses.map((exp) =>
-            exp.id === formData.id ? { ...exp, ...data } : exp
+            exp.expense_id === formData.id ? response.data.expense : exp
           )
         );
-        console.log('Expense updated:', data);
+        setSuccess('Expense updated successfully');
       } else {
-        // Add expense (placeholder)
-        // await axios.post('/api/expenses', data);
-        const newExpense = { id: expenses.length + 1, ...data };
-        setExpenses([...expenses, newExpense]);
-        console.log('Expense added:', newExpense);
+        const response = await axios.post('/api/expenses/create-expense', data, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setExpenses([...expenses, response.data.expense]);
+        setSuccess('Expense created successfully');
       }
       // Reset form
-      setFormData({ id: null, date: '2025-07-19', description: '', amount: '', category: '' });
+      setFormData({ id: null, date: currentDate, description: '', amount: '', category: '' });
       setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving expense:', error);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save expense');
     }
   };
 
   // Handle edit button click
   const handleEdit = (expense) => {
     setFormData({
-      id: expense.id,
+      id: expense.expense_id,
       date: expense.date,
       description: expense.description,
       amount: expense.amount.toString(),
       category: expense.category,
     });
     setIsEditing(true);
+    setSuccess(null);
+    setError(null);
   };
 
   // Handle delete button click
   const handleDelete = async (id) => {
     try {
-      // await axios.delete(`/api/expenses/${id}`);
-      setExpenses(expenses.filter((exp) => exp.id !== id));
-      console.log('Expense deleted:', id);
-    } catch (error) {
-      console.error('Error deleting expense:', error);
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/expenses/delete-expense/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setExpenses(expenses.filter((exp) => exp.expense_id !== id));
+      setSuccess('Expense deleted successfully');
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete expense');
     }
   };
 
-  // Handle invoice generation
-  const handleGenerateInvoice = (e) => {
-    e.preventDefault();
-    if (!selectedAppointment) {
-      console.log('No appointment selected for invoice');
-      return;
-    }
-    const appt = appointments.find((a) => a.id === parseInt(selectedAppointment));
-    if (appt) {
-      const invoiceData = {
-        invoiceId: `INV-${appt.id}-${Date.now()}`,
-        customerName: appt.customerName,
-        service: appt.service,
-        date: appt.date,
-        time: appt.time,
-        staffName: appt.staffName,
-        amount: appt.price,
-        issuedDate: '2025-07-19',
-      };
-      setInvoice(invoiceData);
-      console.log('Invoice generated:', invoiceData);
-      // Placeholder for PDF generation (e.g., using jsPDF)
-    }
-  };
+
+
+  // Generate PDF report using jsPDF
+ // Generate PDF report using jsPDF
+const handleDownloadReport = () => {
+  const { todayExpenses, todayRevenue, netProfit } = getDailyReport();
+  const formattedDate = formatDate(currentDate);
+  const doc = new jsPDF();
+
+  // Set font to Helvetica (Poppins not supported in jsPDF)
+  doc.setFont('helvetica', 'normal');
+
+  // Title
+  doc.setFontSize(20);
+  doc.setTextColor(219, 39, 119); // pink-600
+  doc.text(`Daily Financial Report - ${formattedDate}`, 20, 20);
+
+  // Financial Summary
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0); // Black
+  doc.text('Financial Summary', 20, 40);
+  doc.setFontSize(12);
+  doc.text(`Total Expenses: LKR ${todayExpenses}`, 20, 50);
+  doc.text(`Total Revenue: LKR ${todayRevenue}`, 20, 60);
+  doc.text(`Net Profit: LKR ${netProfit}`, 20, 70);
+
+  // Expenses Table
+  doc.setFontSize(14);
+  doc.text('Expenses', 20, 90);
+  if (expenses.length === 0) {
+    doc.setFontSize(12);
+    doc.text('No expenses recorded for today.', 20, 100);
+  } else {
+    autoTable(doc, {
+      startY: 100,
+      head: [['ID', 'Date', 'Description', 'Amount (LKR)', 'Category']],
+      body: expenses
+        .filter((exp) => formatDate(exp.date) === currentDate)
+        .map((exp) => [
+          exp.expense_id,
+          formatDate(exp.date),
+          exp.description,
+          parseFloat(exp.amount),
+          exp.category,
+        ]),
+      headStyles: { fillColor: [236, 72, 153] }, // pink-500
+      bodyStyles: { textColor: [55, 65, 81] }, // gray-700
+      alternateRowStyles: { fillColor: [255, 245, 247] }, // pink-50
+      margin: { left: 20, right: 20 },
+    });
+  }
+
+  // Paid Invoices Table
+  const expensesTableEndY = expenses.length === 0 ? 100 : doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(14);
+  doc.text('Paid Invoices', 20, expensesTableEndY + 10);
+  if (invoices.length === 0) {
+    doc.setFontSize(12);
+    doc.text('No paid invoices recorded for today.', 20, expensesTableEndY + 20);
+  } else {
+    autoTable(doc, {
+      startY: expensesTableEndY + 20,
+      head: [['Invoice ID', 'Service', 'Customer', 'Staff', 'Date', 'Time', 'Amount (LKR)', 'Payment Method']],
+      body: invoices
+        .filter((inv) => inv.date_issued === currentDate)
+        .map((inv) => [
+          inv.invoice_id,
+          inv.service_name,
+          inv.customer_name,
+          inv.staff_name,
+          formatDate(inv.date_issued),
+          inv.appointment_time,
+          parseFloat(inv.total_amount).toFixed(2),
+          inv.payment_method,
+        ]),
+      headStyles: { fillColor: [236, 72, 153] }, // pink-500
+      bodyStyles: { textColor: [55, 65, 81] }, // gray-700
+      alternateRowStyles: { fillColor: [255, 245, 247] }, // pink-50
+      margin: { left: 20, right: 20 },
+    });
+  }
+
+  // Save PDF
+  doc.save(`Financial_Report_${currentDate}.pdf`);
+};
 
   const { todayExpenses, todayRevenue, netProfit } = getDailyReport();
 
@@ -208,33 +282,57 @@ const TrackExpenses = ({ setActiveComponent }) => {
           .table-container {
             overflow-x: auto;
           }
+          .table-container::-webkit-scrollbar {
+            height: 8px;
+          }
+          .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+          .table-container::-webkit-scrollbar-thumb {
+            background: #ec4899; /* pink-500 */
+            border-radius: 4px;
+          }
+          .table-container::-webkit-scrollbar-thumb:hover {
+            background: #db2777; /* pink-600 */
+          }
         `}
       </style>
       <h2 className="text-3xl sm:text-4xl font-extrabold text-pink-700 mb-6 flex items-center">
         <FaDollarSign className="mr-3 text-pink-500" /> Track Expenses
       </h2>
       <p className="text-gray-700 text-lg mb-8">
-        Manage expenses, view daily financial reports, and generate invoices for appointments.
+        Manage expenses, view paid invoices, and track daily financial reports.
       </p>
-      
+      {success && <div className="text-green-500 mb-4">{success}</div>}
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <div className="expenses-scroll">
         {/* Daily Financial Report */}
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
-          <h3 className="text-2xl font-semibold text-pink-700 mb-4">Daily Financial Report (July 19, 2025)</h3>
+          <h3 className="text-2xl font-semibold text-pink-700 mb-4">Daily Financial Report ({formatDate(currentDate)})</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 bg-pink-50 rounded-lg">
               <p className="text-gray-700 font-medium">Total Expenses</p>
-              <p className="text-pink-500 text-xl font-semibold">${todayExpenses.toFixed(2)}</p>
+              <p className="text-pink-500 text-xl font-semibold">LKR {todayExpenses.toFixed(2)}</p>
             </div>
             <div className="p-4 bg-pink-50 rounded-lg">
               <p className="text-gray-700 font-medium">Total Revenue</p>
-              <p className="text-pink-500 text-xl font-semibold">${todayRevenue.toFixed(2)}</p>
+              <p className="text-pink-500 text-xl font-semibold">LKR {todayRevenue.toFixed(2)}</p>
             </div>
             <div className="p-4 bg-pink-50 rounded-lg">
               <p className="text-gray-700 font-medium">Net Profit</p>
               <p className={`text-xl font-semibold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ${netProfit.toFixed(2)}
+                LKR {netProfit.toFixed(2)}
               </p>
             </div>
+          </div>
+          <div className="mt-4 text-center">
+            <button
+              className="bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 hover:shadow-lg transition duration-300 font-poppins flex items-center mx-auto"
+              onClick={handleDownloadReport}
+            >
+              <FaDownload className="mr-2" /> Download Reports
+            </button>
           </div>
         </div>
 
@@ -268,7 +366,7 @@ const TrackExpenses = ({ setActiveComponent }) => {
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Amount ($)</label>
+              <label className="block text-gray-700 font-medium mb-1">Amount (LKR)</label>
               <input
                 type="number"
                 name="amount"
@@ -310,8 +408,10 @@ const TrackExpenses = ({ setActiveComponent }) => {
                   type="button"
                   className="bg-white text-pink-700 px-4 py-2 rounded-lg border border-pink-500 hover:bg-pink-100 hover:text-pink-500 transition font-poppins"
                   onClick={() => {
-                    setFormData({ id: null, date: '2025-07-19', description: '', amount: '', category: '' });
+                    setFormData({ id: null, date: currentDate, description: '', amount: '', category: '' });
                     setIsEditing(false);
+                    setSuccess(null);
+                    setError(null);
                   }}
                 >
                   Cancel
@@ -321,51 +421,49 @@ const TrackExpenses = ({ setActiveComponent }) => {
           </form>
         </div>
 
-        {/* Generate Invoice Form */}
-        <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
-          <h3 className="text-2xl font-semibold text-pink-700 mb-4">Generate Invoice</h3>
-          <form onSubmit={handleGenerateInvoice} className="space-y-4">
-            <div>
-              <label className="block text-gray-700 font-medium mb-1">Select Appointment</label>
-              <select
-                value={selectedAppointment}
-                onChange={(e) => setSelectedAppointment(e.target.value)}
-                className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                required
-              >
-                <option value="" disabled>
-                  Select Appointment
-                </option>
-                {appointments
-                  .filter((appt) => appt.status === 'Approved')
-                  .map((appt) => (
-                    <option key={appt.id} value={appt.id}>
-                      {appt.service} - {appt.customerName} ({appt.date}, {appt.time})
-                    </option>
+        {/* Paid Invoices List */}
+        {invoices.length === 0 ? (
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8 text-center">
+            <p className="text-gray-700 text-lg">No paid invoices recorded for today.</p>
+          </div>
+        ) : (
+          <div className="table-container mb-8">
+            <h3 className="text-2xl font-semibold text-pink-700 mb-4">Paid Invoices ({formatDate(currentDate)})</h3>
+            <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
+              <thead>
+                <tr className="bg-pink-100 text-pink-700">
+                  <th className="px-6 py-4 text-left font-semibold text-base">Invoice ID</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Service</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Customer</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Staff</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Date</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Time</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Amount (LKR)</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Payment Method</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices
+                  .filter((inv) => inv.date_issued === currentDate)
+                  .map((invoice) => (
+                    <tr
+                      key={invoice.invoice_id}
+                      className="border-t border-pink-100 hover:bg-pink-50 transition duration-200"
+                    >
+                      <td className="px-6 py-4 text-pink-500 font-medium">{invoice.invoice_id}</td>
+                      <td className="px-6 py-4 text-gray-700">{invoice.service_name}</td>
+                      <td className="px-6 py-4 text-gray-700">{invoice.customer_name}</td>
+                      <td className="px-6 py-4 text-gray-700">{invoice.staff_name}</td>
+                      <td className="px-6 py-4 text-pink-500 font-medium">{formatDate(invoice.date_issued)}</td>
+                      <td className="px-6 py-4 text-gray-700">{invoice.appointment_time}</td>
+                      <td className="px-6 py-4 text-pink-500 font-medium">LKR {parseFloat(invoice.total_amount).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-gray-700">{invoice.payment_method}</td>
+                    </tr>
                   ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              className="bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 hover:shadow-lg transition duration-300 font-poppins"
-            >
-              Generate Invoice
-            </button>
-          </form>
-          {invoice && (
-            <div className="mt-4 p-4 bg-pink-50 rounded-lg">
-              <h4 className="text-lg font-semibold text-pink-700">Invoice Details</h4>
-              <p className="text-gray-700">Invoice ID: {invoice.invoiceId}</p>
-              <p className="text-gray-700">Customer: {invoice.customerName}</p>
-              <p className="text-gray-700">Service: {invoice.service}</p>
-              <p className="text-gray-700">Date: {invoice.date}</p>
-              <p className="text-gray-700">Time: {invoice.time}</p>
-              <p className="text-gray-700">Staff: {invoice.staffName}</p>
-              <p className="text-pink-500 font-semibold">Amount: ${invoice.amount.toFixed(2)}</p>
-              <p className="text-gray-700">Issued: {invoice.issuedDate}</p>
-            </div>
-          )}
-        </div>
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Expenses List */}
         {expenses.length === 0 ? (
@@ -380,12 +478,13 @@ const TrackExpenses = ({ setActiveComponent }) => {
           </div>
         ) : (
           <div className="table-container">
+            <h3 className="text-2xl font-semibold text-pink-700 mb-4">Expenses</h3>
             <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
               <thead>
                 <tr className="bg-pink-100 text-pink-700">
                   <th className="px-6 py-4 text-left font-semibold text-base">Date</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Description</th>
-                  <th className="px-6 py-4 text-left font-semibold text-base">Amount</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Amount (LKR)</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Category</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Actions</th>
                 </tr>
@@ -393,12 +492,12 @@ const TrackExpenses = ({ setActiveComponent }) => {
               <tbody>
                 {expenses.map((expense) => (
                   <tr
-                    key={expense.id}
+                    key={expense.expense_id}
                     className="border-t border-pink-100 hover:bg-pink-50 transition duration-200"
                   >
-                    <td className="px-6 py-4 text-pink-500 font-medium">{expense.date}</td>
+                    <td className="px-6 py-4 text-pink-500 font-medium">{formatDate(expense.date)}</td>
                     <td className="px-6 py-4 text-gray-700">{expense.description}</td>
-                    <td className="px-6 py-4 text-pink-500 font-medium">${expense.amount.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-pink-500 font-medium">LKR {parseFloat(expense.amount).toFixed(2)}</td>
                     <td className="px-6 py-4 text-gray-700">{expense.category}</td>
                     <td className="px-6 py-4 flex space-x-2">
                       <button
@@ -409,7 +508,7 @@ const TrackExpenses = ({ setActiveComponent }) => {
                       </button>
                       <button
                         className="text-pink-500 hover:text-pink-600 transition"
-                        onClick={() => handleDelete(expense.id)}
+                        onClick={() => handleDelete(expense.expense_id)}
                       >
                         <FaTrash className="text-lg" />
                       </button>
@@ -429,7 +528,7 @@ const TrackExpenses = ({ setActiveComponent }) => {
           </button>
         </div>
       </div>
-    
+    </div>
   );
 };
 
