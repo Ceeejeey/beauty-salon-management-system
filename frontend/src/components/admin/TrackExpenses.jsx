@@ -72,7 +72,7 @@ const TrackExpenses = ({ setActiveComponent }) => {
     const todayExpenses = expenses
       .filter((exp) => formatDate(exp.date) === currentDate)
       .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-    console.log('Today Expenses:', todayExpenses);
+    
     const todayRevenue = invoices
       .filter((inv) => formatDate(inv.date_issued) === currentDate)
       .reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0);
@@ -237,7 +237,7 @@ const handleDownloadReport = () => {
       startY: expensesTableEndY + 20,
       head: [['Invoice ID', 'Service', 'Customer', 'Staff', 'Date', 'Time', 'Amount (LKR)', 'Payment Method']],
       body: invoices
-        .filter((inv) => inv.date_issued === currentDate)
+        .filter((inv) => formatDate(inv.date_issued) === currentDate)
         .map((inv) => [
           inv.invoice_id,
           inv.service_name,
@@ -427,7 +427,7 @@ const handleDownloadReport = () => {
             <p className="text-gray-700 text-lg">No paid invoices recorded for today.</p>
           </div>
         ) : (
-          <div className="table-container mb-8">
+          <>
             <h3 className="text-2xl font-semibold text-pink-700 mb-4">Paid Invoices ({formatDate(currentDate)})</h3>
             <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
               <thead>
@@ -444,7 +444,7 @@ const handleDownloadReport = () => {
               </thead>
               <tbody>
                 {invoices
-                  .filter((inv) => inv.date_issued === currentDate)
+                  .filter((inv) => formatDate(inv.date_issued) === currentDate)
                   .map((invoice) => (
                     <tr
                       key={invoice.invoice_id}
@@ -462,7 +462,8 @@ const handleDownloadReport = () => {
                   ))}
               </tbody>
             </table>
-          </div>
+            < br />
+          </>
         )}
 
         {/* Expenses List */}
@@ -477,7 +478,7 @@ const handleDownloadReport = () => {
             </button>
           </div>
         ) : (
-          <div className="table-container">
+          <>
             <h3 className="text-2xl font-semibold text-pink-700 mb-4">Expenses</h3>
             <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
               <thead>
@@ -517,7 +518,7 @@ const handleDownloadReport = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </>
         )}
         <div className="mt-8 text-center">
           <button
