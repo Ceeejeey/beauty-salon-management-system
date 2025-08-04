@@ -415,6 +415,27 @@ const rejectAppointment = async (req, res) => {
   }
 };
 
+// Get all completed appointments
+const getAppointments = async (req, res) => {
+  try {
+    const [appointments] = await pool.execute(
+      `SELECT a.appointment_id, a.service_id, s.name AS service_name, c.name AS customer_name,
+              a.appointment_date, a.appointment_time, a.staff_id, a.status
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       JOIN users c ON a.customer_id = c.user_id
+       WHERE a.status = 'Completed'`
+    );
+    res.status(200).json({
+      message: 'Appointments retrieved successfully',
+      appointments,
+    });
+  } catch (error) {
+    console.error('Get appointments error:', error);
+    res.status(500).json({ error: 'Server error during appointments retrieval' });
+  }
+};
+
 module.exports = {
   createAppointment: [createAppointment],
   updateAppointmentforCustomer: [updateAppointmentforCustomer],
@@ -425,4 +446,5 @@ module.exports = {
   getAppointmentById: [getAppointmentById],
   deleteAppointment: [deleteAppointment],
   getPendingAppointments: [getPendingAppointments],
+  getAppointments: [getAppointments],
 };
