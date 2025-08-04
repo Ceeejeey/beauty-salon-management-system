@@ -272,7 +272,7 @@ const GenerateInvoice = ({ setActiveComponent }) => {
             </button>
           </div>
         ) : (
-          <div className="table-container">
+          <>
             <h3 className="text-2xl font-semibold text-pink-700 mb-4">Generated Invoices</h3>
             <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
               <thead>
@@ -320,7 +320,7 @@ const GenerateInvoice = ({ setActiveComponent }) => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </>
         )}
         <div className="mt-8 text-center">
           <button

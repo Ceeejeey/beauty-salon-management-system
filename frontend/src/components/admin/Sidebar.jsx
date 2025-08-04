@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaHome, FaCut, FaCalendarAlt, FaUsers, FaDollarSign, FaGift, FaTimes } from 'react-icons/fa';
+import { FaHome, FaCut, FaCalendarAlt, FaUsers, FaDollarSign, FaGift, FaTimes, FaFileInvoice, FaComments} from 'react-icons/fa';
 
 const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
   const [isServicesOpen, setIsServicesOpen] = useState(false);
@@ -24,6 +24,8 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
     { name: 'Manage Staff', icon: <FaUsers className="mr-3 text-pink-500" />, action: () => setActiveComponent('Manage Staff') },
     { name: 'Track Expenses', icon: <FaDollarSign className="mr-3 text-pink-500" />, action: () => setActiveComponent('Track Expenses') },
     { name: 'Edit and Make Promotions', icon: <FaGift className="mr-3 text-pink-500" />, action: () => setActiveComponent('Edit and Make Promotions') },
+    { name: 'Generate Invoice', icon: <FaFileInvoice className="mr-3 text-pink-500" />, action: () => setActiveComponent('Generate Invoice') },
+    { name: 'Admin Feedbacks', icon: <FaComments className="mr-3 text-pink-500" />, action: () => setActiveComponent('Admin Feedbacks') },
   ];
 
   return (
