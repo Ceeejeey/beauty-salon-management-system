@@ -360,7 +360,7 @@ const ManageStaff = ({ setActiveComponent }) => {
             </button>
           </div>
         ) : (
-          <div className="table-container">
+          
             <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
               <thead>
                 <tr className="bg-pink-100 text-pink-700">
@@ -424,7 +424,7 @@ const ManageStaff = ({ setActiveComponent }) => {
                 ))}
               </tbody>
             </table>
-          </div>
+          
         )}
         <div className="mt-8 text-center">
           <button

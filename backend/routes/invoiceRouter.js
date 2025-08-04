@@ -1,5 +1,5 @@
 const express = require('express');
-const { createInvoice, getInvoiceById, getInvoices, updateInvoice, deleteInvoice } = require('../controllers/invoiceController/invoiceController');
+const { createInvoice, getInvoiceById, getInvoices, updateInvoice, deleteInvoice, getPaidInvoices } = require('../controllers/invoiceController/invoiceController');
 const { verifyAdmin } = require('../middlewares/verifyUser'); // Assuming you have a verifyUser middleware
 const invoiceRouter = express.Router();
 
@@ -17,5 +17,8 @@ invoiceRouter.put('/update-invoice/:id', verifyAdmin, updateInvoice);
 
 // Route for deleting an invoice
 invoiceRouter.delete('/delete-invoice/:id', verifyAdmin, deleteInvoice);
+
+// Route for getting paid invoices
+invoiceRouter.get('/get-paid-invoices', verifyAdmin, getPaidInvoices);
 
 module.exports = invoiceRouter;
