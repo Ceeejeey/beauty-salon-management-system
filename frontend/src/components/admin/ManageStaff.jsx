@@ -1,104 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { FaUsers, FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
-import axios from 'axios';
-
-// Sample staff data (replace with API call)
-const initialStaff = [
-  {
-    id: 1,
-    name: 'Emma Johnson',
-    email: 'emma@salon.com',
-    role: 'Stylist',
-    image: '/assets/staff/emma.jpg',
-  },
-  {
-    id: 2,
-    name: 'Liam Davis',
-    email: 'liam@salon.com',
-    role: 'Therapist',
-    image: '/assets/staff/liam.jpg',
-  },
-  {
-    id: 3,
-    name: 'Olivia Wilson',
-    email: 'olivia@salon.com',
-    role: 'Stylist',
-    image: '/assets/staff/olivia.jpg',
-  },
-];
-
-// Sample appointments data (replace with API call)
-const initialAppointments = [
-  {
-    id: 1,
-    service: 'Haircut & Styling',
-    customerName: 'Jane Doe',
-    date: '2025-07-20',
-    time: '2:00 PM',
-    staffId: 1,
-    status: 'Approved',
-  },
-  {
-    id: 2,
-    service: 'Manicure & Pedicure',
-    customerName: 'Emily Smith',
-    date: '2025-07-25',
-    time: '10:00 AM',
-    staffId: 1,
-    status: 'Approved',
-  },
-  {
-    id: 3,
-    service: 'Facial Treatment',
-    customerName: 'Sarah Brown',
-    date: '2025-07-19',
-    time: '3:00 PM',
-    staffId: 2,
-    status: 'Approved',
-  },
-];
-
-// Sample staff schedules (replace with API call or logic)
-const initialSchedules = [
-  { staffId: 1, date: '2025-07-19', available: false }, // Emma: Booked today
-  { staffId: 2, date: '2025-07-19', available: false }, // Liam: Booked today
-  { staffId: 3, date: '2025-07-19', available: true }, // Olivia: Available today
-];
+import axios from '../../api/axios';
+import { jwtDecode } from 'jwt-decode';
 
 const ManageStaff = ({ setActiveComponent }) => {
-  const [staff, setStaff] = useState(initialStaff);
-  const [appointments, setAppointments] = useState(initialAppointments);
-  const [schedules, setSchedules] = useState(initialSchedules);
+  const [staff, setStaff] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [formData, setFormData] = useState({
     id: null,
     name: '',
     email: '',
+    password: '',
     role: '',
-    image: null,
+    contact: '',
+    availability: '1',
+    profile_picture: null,
   });
   const [isEditing, setIsEditing] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Fetch staff, appointments, and schedules (placeholder for API calls)
+  // Fetch staff and appointments
   useEffect(() => {
-    // axios.get('/api/staff').then((response) => setStaff(response.data));
-    // axios.get('/api/appointments').then((response) => setAppointments(response.data));
-    // axios.get('/api/staff-schedules').then((response) => setSchedules(response.data));
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Please log in as an admin to manage staff');
+          return;
+        }
+        const decoded = jwtDecode(token);
+        if (decoded.role !== 'admin') {
+          setError('Access restricted to admins');
+          return;
+        }
+
+        const [staffResponse, appointmentsResponse] = await Promise.all([
+          axios.get('/api/staff/get-staff', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('/api/appointments/get-appointments', { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        setStaff(staffResponse.data.staff);
+        setAppointments(appointmentsResponse.data.appointments);
+        setSuccess('Data retrieved successfully');
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to fetch data');
+      }
+    };
+    fetchData();
   }, []);
 
   // Calculate appointments completed per staff
-  const getAppointmentsCompleted = (staffId) => {
+  const getAppointmentsCompleted = (userId) => {
     return appointments.filter(
-      (appt) => appt.staffId === staffId && appt.status === 'Approved'
+      (appt) => appt.staff_id === userId && appt.status === 'Completed'
     ).length;
   };
 
-  // Check availability for today (July 19, 2025)
-  const getAvailabilityToday = (staffId) => {
-    const todaySchedule = schedules.find(
-      (sched) => sched.staffId === staffId && sched.date === '2025-07-19'
-    );
-    return todaySchedule ? (todaySchedule.available ? 'Available' : 'Booked') : 'Unknown';
+  // Get availability status
+  const getAvailabilityToday = (availability) => {
+    return availability === 1 ? 'Available' : 'Booked';
   };
 
   // Handle form input changes
@@ -110,80 +71,113 @@ const ManageStaff = ({ setActiveComponent }) => {
   // Handle image upload
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    setFormData({ ...formData, image: file });
+    setFormData({ ...formData, profile_picture: file });
     setImagePreview(file ? URL.createObjectURL(file) : null);
   };
 
   // Handle form submission (add/edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccess(null);
+    setError(null);
+
+    // Client-side validation
+    if (!formData.name || !formData.email || !formData.role || !formData.contact) {
+      setError('Name, email, role, and contact are required');
+      return;
+    }
+    if (!isEditing && !formData.password) {
+      setError('Password is required for new staff');
+      return;
+    }
+    if (formData.password && formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError('Invalid email format');
+      return;
+    }
+    if (!/^\+?\d{10,15}$/.test(formData.contact.replace(/[\s-]/g, ''))) {
+      setError('Invalid contact number');
+      return;
+    }
+    if (!['0', '1'].includes(formData.availability)) {
+      setError('Availability must be 0 or 1');
+      return;
+    }
+
     const data = new FormData();
     data.append('name', formData.name);
     data.append('email', formData.email);
+    if (formData.password) data.append('password', formData.password);
     data.append('role', formData.role);
-    if (formData.image) data.append('image', formData.image);
+    data.append('contact', formData.contact);
+    data.append('availability', formData.availability);
+    if (formData.profile_picture) {
+      data.append('profile_picture', formData.profile_picture);
+    } else if (isEditing && !formData.profile_picture) {
+      data.append('profile_picture', 'null');
+    }
 
     try {
+      const token = localStorage.getItem('token');
       if (isEditing) {
-        // Update staff (placeholder)
-        // await axios.put(`/api/staff/${formData.id}`, data);
+        const response = await axios.put(`/api/staff/update-staff/${formData.id}`, data, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+        });
         setStaff(
           staff.map((s) =>
-            s.id === formData.id
-              ? {
-                  ...s,
-                  name: formData.name,
-                  email: formData.email,
-                  role: formData.role,
-                  image: imagePreview || s.image,
-                }
-              : s
+            s.user_id === formData.id ? response.data.staff : s
           )
         );
-        console.log('Staff updated:', formData);
+        setSuccess('Staff updated successfully');
       } else {
-        // Add staff (placeholder)
-        // await axios.post('/api/staff', data);
-        const newStaff = {
-          id: staff.length + 1,
-          name: formData.name,
-          email: formData.email,
-          role: formData.role,
-          image: imagePreview || '/assets/staff/placeholder.jpg',
-        };
-        setStaff([...staff, newStaff]);
-        console.log('Staff added:', newStaff);
+        const response = await axios.post('/api/staff/create-staff', data, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+        });
+        setStaff([...staff, response.data.staff]);
+        setSuccess('Staff created successfully');
       }
       // Reset form
-      setFormData({ id: null, name: '', email: '', role: '', image: null });
+      setFormData({ id: null, name: '', email: '', password: '', role: '', contact: '', availability: '1', profile_picture: null });
       setImagePreview(null);
       setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving staff:', error);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save staff');
     }
   };
 
   // Handle edit button click
   const handleEdit = (staffMember) => {
     setFormData({
-      id: staffMember.id,
+      id: staffMember.user_id,
       name: staffMember.name,
       email: staffMember.email,
+      password: '',
       role: staffMember.role,
-      image: null,
+      contact: staffMember.contact,
+      availability: staffMember.availability.toString(),
+      profile_picture: staffMember.profile_picture ? staffMember.profile_picture : null,
     });
-    setImagePreview(staffMember.image);
+    setImagePreview(staffMember.profile_picture);
     setIsEditing(true);
+    setSuccess(null);
+    setError(null);
   };
 
   // Handle delete button click
   const handleDelete = async (id) => {
     try {
-      // await axios.delete(`/api/staff/${id}`);
-      setStaff(staff.filter((s) => s.id !== id));
-      console.log('Staff deleted:', id);
-    } catch (error) {
-      console.error('Error deleting staff:', error);
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/staff/delete-staff/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setStaff(staff.filter((s) => s.user_id !== id));
+      setSuccess('Staff deleted successfully');
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete staff');
     }
   };
 
@@ -208,15 +202,31 @@ const ManageStaff = ({ setActiveComponent }) => {
           .table-container {
             overflow-x: auto;
           }
+          .table-container::-webkit-scrollbar {
+            height: 8px;
+          }
+          .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+          .table-container::-webkit-scrollbar-thumb {
+            background: #ec4899; /* pink-500 */
+            border-radius: 4px;
+          }
+          .table-container::-webkit-scrollbar-thumb:hover {
+            background: #db2777; /* pink-600 */
+          }
         `}
       </style>
       <h2 className="text-3xl sm:text-4xl font-extrabold text-pink-700 mb-6 flex items-center">
         <FaUsers className="mr-3 text-pink-500" /> Manage Staff
       </h2>
       <p className="text-gray-700 text-lg mb-8">
-        View staff performance, schedules, and manage staff records.
+        View staff performance, availability, and manage staff records.
       </p>
-      
+      {success && <div className="text-green-500 mb-4">{success}</div>}
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <div className="staff-scroll">
         {/* Form */}
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
           <h3 className="text-2xl font-semibold text-pink-700 mb-4">
@@ -248,27 +258,59 @@ const ManageStaff = ({ setActiveComponent }) => {
               />
             </div>
             <div>
+              <label className="block text-gray-700 font-medium mb-1">Password {isEditing && '(Leave blank to keep unchanged)'}</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                placeholder={isEditing ? 'Enter new password (optional)' : 'Enter password'}
+                required={!isEditing}
+              />
+            </div>
+            <div>
               <label className="block text-gray-700 font-medium mb-1">Role</label>
-              <select
+              <input
+                type="text"
                 name="role"
                 value={formData.role}
                 onChange={handleInputChange}
                 className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                placeholder="Enter role (e.g., Stylist, Therapist, Manager)"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Contact</label>
+              <input
+                type="text"
+                name="contact"
+                value={formData.contact}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                placeholder="Enter contact number (e.g., 123-456-7890)"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Availability Today</label>
+              <select
+                name="availability"
+                value={formData.availability}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                 required
               >
-                <option value="" disabled>
-                  Select Role
-                </option>
-                <option value="Stylist">Stylist</option>
-                <option value="Therapist">Therapist</option>
-                <option value="Manager">Manager</option>
+                <option value="1">Available</option>
+                <option value="0">Booked</option>
               </select>
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Profile Image</label>
+              <label className="block text-gray-700 font-medium mb-1">Profile Picture</label>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png"
                 onChange={handleImageChange}
                 className="w-full p-3 border border-pink-200 rounded-lg"
               />
@@ -292,9 +334,11 @@ const ManageStaff = ({ setActiveComponent }) => {
                   type="button"
                   className="bg-white text-pink-700 px-4 py-2 rounded-lg border border-pink-500 hover:bg-pink-100 hover:text-pink-500 transition font-poppins"
                   onClick={() => {
-                    setFormData({ id: null, name: '', email: '', role: '', image: null });
+                    setFormData({ id: null, name: '', email: '', password: '', role: '', contact: '', availability: '1', profile_picture: null });
                     setImagePreview(null);
                     setIsEditing(false);
+                    setSuccess(null);
+                    setError(null);
                   }}
                 >
                   Cancel
@@ -324,6 +368,7 @@ const ManageStaff = ({ setActiveComponent }) => {
                   <th className="px-6 py-4 text-left font-semibold text-base">Name</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Email</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Role</th>
+                  <th className="px-6 py-4 text-left font-semibold text-base">Contact</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Appointments Completed</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Availability Today</th>
                   <th className="px-6 py-4 text-left font-semibold text-base">Actions</th>
@@ -332,32 +377,33 @@ const ManageStaff = ({ setActiveComponent }) => {
               <tbody>
                 {staff.map((staffMember) => (
                   <tr
-                    key={staffMember.id}
+                    key={staffMember.user_id}
                     className="border-t border-pink-100 hover:bg-pink-50 transition duration-200"
                   >
                     <td className="px-6 py-4">
                       <img
-                        src={staffMember.image}
+                        src={staffMember.profile_picture || 'https://placeholder.co/100x100?text=Staff'}
                         alt={staffMember.name}
                         className="w-16 h-16 object-cover rounded-lg"
-                        onError={(e) => (e.target.src = 'https://via.placeholder.com/100x100?text=Staff')}
+                        onError={(e) => (e.target.src = 'https://placeholder.co/100x100?text=Staff')}
                       />
                     </td>
                     <td className="px-6 py-4 text-gray-700">{staffMember.name}</td>
                     <td className="px-6 py-4 text-gray-700">{staffMember.email}</td>
                     <td className="px-6 py-4 text-gray-700">{staffMember.role}</td>
+                    <td className="px-6 py-4 text-gray-700">{staffMember.contact}</td>
                     <td className="px-6 py-4 text-pink-500 font-medium">
-                      {getAppointmentsCompleted(staffMember.id)}
+                      {getAppointmentsCompleted(staffMember.user_id)}
                     </td>
                     <td className="px-6 py-4">
                       <span
                         className={`${
-                          getAvailabilityToday(staffMember.id) === 'Available'
+                          getAvailabilityToday(staffMember.availability) === 'Available'
                             ? 'text-green-600'
                             : 'text-red-600'
                         } font-medium`}
                       >
-                        {getAvailabilityToday(staffMember.id)}
+                        {getAvailabilityToday(staffMember.availability)}
                       </span>
                     </td>
                     <td className="px-6 py-4 flex space-x-2">
@@ -369,7 +415,7 @@ const ManageStaff = ({ setActiveComponent }) => {
                       </button>
                       <button
                         className="text-pink-500 hover:text-pink-600 transition"
-                        onClick={() => handleDelete(staffMember.id)}
+                        onClick={() => handleDelete(staffMember.user_id)}
                       >
                         <FaTrash className="text-lg" />
                       </button>
@@ -389,7 +435,7 @@ const ManageStaff = ({ setActiveComponent }) => {
           </button>
         </div>
       </div>
-    
+    </div>
   );
 };
 
