@@ -462,7 +462,9 @@ const getCompletedAppointments = async (req, res) => {
 const getStaffAppointments = async (req, res) => {
   const { staffId } = req.params;
   try {
+    console.log('staff id from params', staffId)
     const userId = req.user.user_id;
+    console.log('user staff id', userId)
     if (parseInt(staffId) !== userId) {
       return res.status(403).json({ error: 'Access restricted to your own appointments' });
     }
@@ -473,7 +475,7 @@ const getStaffAppointments = async (req, res) => {
        JOIN services s ON a.service_id = s.service_id
        JOIN staff st ON a.staff_id = st.user_id
        JOIN users u ON a.customer_id = u.user_id
-       WHERE a.staff_id = ? AND a.status IN ('Confirmed', 'Completed')
+       WHERE a.staff_id = ? AND a.status IN ('Approved')
        ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
       [staffId]
     );

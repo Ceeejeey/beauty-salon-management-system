@@ -38,6 +38,6 @@ appointmentRouter.get('/get-appointments', verifyAdmin, getAppointments);
 appointmentRouter.get('/get-completed-appointments', verifyAdmin, getCompletedAppointments);
 
 // Route for getting appointments by staff ID
-appointmentRouter.get('/staff/:staff_id', verifyStaff, getStaffAppointments);
+appointmentRouter.get('/staff/:staffId', verifyStaff, getStaffAppointments);
 
 module.exports = appointmentRouter;
