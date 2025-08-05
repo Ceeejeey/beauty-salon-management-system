@@ -88,88 +88,6 @@ const createAppointment = async (req, res) => {
   }
 };
 
-// Update appointment (admin assigns staff and sets status to Approved)
-const updateAppointment = async (req, res) => {
-  try {
-    const { appointment_id } = req.params;
-    const { staff_id } = req.body;
-
-    // Input validation
-    if (!appointment_id || isNaN(appointment_id)) {
-      return res.status(400).json({ error: 'Valid appointment ID is required' });
-    }
-    if (!staff_id || isNaN(staff_id)) {
-      return res.status(400).json({ error: 'Valid staff ID is required' });
-    }
-
-    // Check if appointment exists and is Pending
-    const [appointments] = await pool.execute(
-      `SELECT * FROM appointments WHERE appointment_id = ? AND status = 'Pending'`,
-      [appointment_id]
-    );
-    if (appointments.length === 0) {
-      return res.status(404).json({ error: 'Appointment not found or not in Pending status' });
-    }
-
-    // Check if staff exists
-    const [staff] = await pool.execute('SELECT * FROM staff WHERE user_id = ?', [staff_id]);
-    if (staff.length === 0) {
-      return res.status(404).json({ error: 'Staff not found' });
-    }
-
-    // Check staff availability
-    const appointment = appointments[0];
-    // const [availability] = await pool.execute(
-    //   `SELECT * FROM availability WHERE staff_id = ? AND date = ? AND time = ? AND status = 'Available'`,
-    //   [staff_id, appointment.appointment_date, appointment.appointment_time]
-    // );
-    // if (availability.length === 0) {
-    //   return res.status(400).json({ error: 'Staff is not available at this time' });
-    // }
-
-    // Check for staff double booking
-    const [existingAppointments] = await pool.execute(
-      `SELECT * FROM appointments WHERE staff_id = ? AND appointment_date = ? AND appointment_time = ?`,
-      [staff_id, appointment.appointment_date, appointment.appointment_time]
-    );
-    if (existingAppointments.length > 0) {
-      return res.status(400).json({ error: 'Staff is already booked at this time' });
-    }
-
-    // Update appointment with staff_id and status
-    await pool.execute(
-      `UPDATE appointments SET staff_id = ?, status = 'Approved' WHERE appointment_id = ?`,
-      [staff_id, appointment_id]
-    );
-
-    // Fetch updated appointment for response
-    const [updatedAppointment] = await pool.execute(
-      `SELECT a.appointment_id, a.customer_id, a.staff_id, a.appointment_date, a.appointment_time, a.status, a.notes, s.name as service_name
-       FROM appointments a
-       JOIN services s ON a.service_id = s.service_id
-       WHERE a.appointment_id = ?`,
-      [appointment_id]
-    );
-
-    res.status(200).json({
-      message: 'Appointment updated successfully',
-      appointment: {
-        appointment_id: updatedAppointment[0].appointment_id,
-        customer_id: updatedAppointment[0].customer_id,
-        staff_id: updatedAppointment[0].staff_id,
-        service_name: updatedAppointment[0].service_name,
-        date: updatedAppointment[0].appointment_date,
-        time: updatedAppointment[0].appointment_time,
-        status: updatedAppointment[0].status,
-        notes: updatedAppointment[0].notes || null,
-      },
-    });
-  } catch (error) {
-    console.error('Update appointment error:', error);
-    res.status(500).json({ error: 'Server error during appointment update' });
-  }
-};
-
 // Get completed appointments for a specific customer
 const getAppointmentByCustomerId = async (req, res) => {
   try {
@@ -367,6 +285,147 @@ const getPendingAppointments = async (req, res) => {
   }
 };
 
+// Create notification (internal function)
+const createNotification = async (user_id, appointment_id, type, message) => {
+  try {
+    // Fetch customer and appointment details
+    const [users] = await pool.execute(
+      `SELECT name FROM users WHERE user_id = ?`,
+      [user_id]
+    );
+    if (users.length === 0) {
+      throw new Error('User not found');
+    }
+    const [appointments] = await pool.execute(
+      `SELECT appointment_date, appointment_time, service_id FROM appointments WHERE appointment_id = ?`,
+      [appointment_id]
+    );
+    if (appointments.length === 0) {
+      throw new Error('Appointment not found');
+    }
+
+    const customer = users[0];
+    const appointment = appointments[0];
+
+    // Fetch service name
+    const [services] = await pool.execute(
+      `SELECT name FROM services WHERE service_id = ?`,
+      [appointment.service_id]
+    );
+    const service_name = services[0]?.name || 'Service';
+
+    // Format appointment date and time
+    const formattedDate = new Date(appointment.appointment_date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const formattedTime = appointment.appointment_time.toLocaleString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    // Replace placeholders in message
+    const finalMessage = message
+      .replace('{customer_name}', customer.name)
+      .replace('{appointment_date}', formattedDate)
+      .replace('{appointment_time}', formattedTime)
+      .replace('{service_name}', service_name)
+      .replace('{status}', type === 'appointment_approved' ? 'Approved' : 'Rejected');
+
+    // Save notification to database
+    await pool.execute(
+      `INSERT INTO notifications (user_id, appointment_id, type, message, status, is_read)
+       VALUES (?, ?, ?, ?, 'sent', FALSE)`,
+      [user_id, appointment_id, type, finalMessage]
+    );
+  } catch (error) {
+    console.error('Create notification error:', error);
+    throw error;
+  }
+};
+
+// Update appointment (admin assigns staff and sets status to Approved)
+const updateAppointment = async (req, res) => {
+  try {
+    const { appointment_id } = req.params;
+    const { staff_id } = req.body;
+
+    // Input validation
+    if (!appointment_id || isNaN(appointment_id)) {
+      return res.status(400).json({ error: 'Valid appointment ID is required' });
+    }
+    if (!staff_id || isNaN(staff_id)) {
+      return res.status(400).json({ error: 'Valid staff ID is required' });
+    }
+
+    // Check if appointment exists and is Pending
+    const [appointments] = await pool.execute(
+      `SELECT * FROM appointments WHERE appointment_id = ? AND status = 'Pending'`,
+      [appointment_id]
+    );
+    if (appointments.length === 0) {
+      return res.status(404).json({ error: 'Appointment not found or not in Pending status' });
+    }
+
+    // Check if staff exists
+    const [staff] = await pool.execute(
+      `SELECT * FROM staff WHERE user_id = ? `,
+      [staff_id]
+    );
+    if (staff.length === 0) {
+      return res.status(404).json({ error: 'Staff not found' });
+    }
+
+    // Check for staff double booking
+    const appointment = appointments[0];
+    const [existingAppointments] = await pool.execute(
+      `SELECT * FROM appointments WHERE staff_id = ? AND appointment_date = ? AND appointment_time = ?`,
+      [staff_id, appointment.appointment_date, appointment.appointment_time]
+    );
+    if (existingAppointments.length > 0) {
+      return res.status(400).json({ error: 'Staff is already booked at this time' });
+    }
+
+    // Update appointment with staff_id and status
+    await pool.execute(
+      `UPDATE appointments SET staff_id = ?, status = 'Approved' WHERE appointment_id = ?`,
+      [staff_id, appointment_id]
+    );
+
+    // Create notification
+    const message = 'Dear {customer_name}, your appointment for {service_name} on {appointment_date} at {appointment_time} has been {status}.';
+    await createNotification(appointment.customer_id, appointment_id, 'appointment_approved', message);
+
+    // Fetch updated appointment for response
+    const [updatedAppointment] = await pool.execute(
+      `SELECT a.appointment_id, a.customer_id, a.staff_id, a.appointment_date, a.appointment_time, a.status, a.notes, s.name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       WHERE a.appointment_id = ?`,
+      [appointment_id]
+    );
+
+    res.status(200).json({
+      message: 'Appointment updated successfully',
+      appointment: {
+        appointment_id: updatedAppointment[0].appointment_id,
+        customer_id: updatedAppointment[0].customer_id,
+        staff_id: updatedAppointment[0].staff_id,
+        service_name: updatedAppointment[0].service_name,
+        date: updatedAppointment[0].appointment_date,
+        time: updatedAppointment[0].appointment_time,
+        status: updatedAppointment[0].status,
+        notes: updatedAppointment[0].notes || null,
+      },
+    });
+  } catch (error) {
+    console.error('Update appointment error:', error);
+    res.status(500).json({ error: 'Server error during appointment update' });
+  }
+};
+
 // Reject appointment (admin)
 const rejectAppointment = async (req, res) => {
   try {
@@ -381,7 +440,10 @@ const rejectAppointment = async (req, res) => {
     }
 
     // Verify appointment exists
-    const [appointments] = await pool.execute('SELECT * FROM appointments WHERE appointment_id = ?', [appointment_id]);
+    const [appointments] = await pool.execute(
+      `SELECT * FROM appointments WHERE appointment_id = ?`,
+      [appointment_id]
+    );
     if (appointments.length === 0) {
       return res.status(404).json({ error: 'Appointment not found' });
     }
@@ -393,14 +455,18 @@ const rejectAppointment = async (req, res) => {
       [rejection_note, appointment_id]
     );
 
+    // Create notification
+    const appointment = appointments[0];
+    const message = `Dear {customer_name}, we regret to inform you that your appointment for {service_name} on {appointment_date} at {appointment_time} has been {status}. Reason: ${rejection_note}`;
+    await createNotification(appointment.customer_id, appointment_id, 'appointment_rejected', message);
+
     // Fetch updated appointment
     const [updatedAppointment] = await pool.execute(
-      `SELECT a.appointment_id, a.customer_id, a.service_id, a.appointment_date, a.appointment_time, a.status, a.notes, 
-              s.name AS service_name, u.name AS customer_name, st.user_id AS staff_id, st.name AS staff_name
+      `SELECT a.appointment_id, a.customer_id, a.staff_id, a.appointment_date, a.appointment_time, a.status, a.notes, 
+              s.service_name, u.name AS customer_name
        FROM appointments a
        JOIN services s ON a.service_id = s.service_id
        JOIN users u ON a.customer_id = u.user_id
-       LEFT JOIN staff st ON a.staff_id = st.user_id
        WHERE a.appointment_id = ?`,
       [appointment_id]
     );
@@ -414,7 +480,6 @@ const rejectAppointment = async (req, res) => {
     res.status(500).json({ error: 'Server error during appointment rejection' });
   }
 };
-
 // Get all completed appointments
 const getAppointments = async (req, res) => {
   try {
@@ -489,6 +554,65 @@ const getStaffAppointments = async (req, res) => {
   }
 };
 
+// Complete appointment (staff)
+const completeAppointment = async (req, res) => {
+  try {
+    const { appointment_id } = req.params;
+    const user = req.user;
+
+    // Input validation
+    if (!appointment_id || isNaN(appointment_id)) {
+      return res.status(400).json({ error: 'Valid appointment ID is required' });
+    }
+
+    // Verify appointment exists and is Approved
+    const [appointments] = await pool.execute(
+      `SELECT * FROM appointments WHERE appointment_id = ? AND status = 'Approved' AND staff_id = ?`,
+      [appointment_id, user.user_id]
+    );
+    if (appointments.length === 0) {
+      return res.status(404).json({ error: 'Appointment not found, not in Approved status, or not assigned to this staff' });
+    }
+
+    // Update appointment status to Completed
+    await pool.execute(
+      `UPDATE appointments SET status = 'Completed' WHERE appointment_id = ?`,
+      [appointment_id]
+    );
+
+    // Create customer notification
+    const appointment = appointments[0];
+    const message = `Dear {customer_name}, your appointment for {service_name} on {appointment_date} at {appointment_time} has been Completed.`;
+    await createNotification(appointment.customer_id, appointment_id, 'appointment_completed', message);
+
+    // Fetch updated appointment for response
+    const [updatedAppointment] = await pool.execute(
+      `SELECT a.appointment_id, a.customer_id, a.staff_id, a.appointment_date, a.appointment_time, a.status, a.notes, s.name
+       FROM appointments a
+       JOIN services s ON a.service_id = s.service_id
+       WHERE a.appointment_id = ?`,
+      [appointment_id]
+    );
+
+    res.status(200).json({
+      message: 'Appointment marked as completed successfully',
+      appointment: {
+        appointment_id: updatedAppointment[0].appointment_id,
+        customer_id: updatedAppointment[0].customer_id,
+        staff_id: updatedAppointment[0].staff_id,
+        service_name: updatedAppointment[0].service_name,
+        date: updatedAppointment[0].appointment_date,
+        time: updatedAppointment[0].appointment_time,
+        status: updatedAppointment[0].status,
+        notes: updatedAppointment[0].notes || null,
+      },
+    });
+  } catch (error) {
+    console.error('Complete appointment error:', error);
+    res.status(500).json({ error: 'Server error during appointment completion' });
+  }
+};
+
 module.exports = {
   createAppointment: [createAppointment],
   updateAppointmentforCustomer: [updateAppointmentforCustomer],
@@ -502,4 +626,5 @@ module.exports = {
   getAppointments: [getAppointments],
   getCompletedAppointments: [getCompletedAppointments],
   getStaffAppointments: [getStaffAppointments],
+  completeAppointment: [completeAppointment],
 };

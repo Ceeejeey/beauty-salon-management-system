@@ -53,7 +53,7 @@ const StaffAppointments = ({ setActiveComponent }) => {
     try {
       const token = localStorage.getItem('token');
       await axios.put(
-        `/api/appointments/complete/${id}`,
+        `/api/appointments/complete-appointment/${id}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -154,7 +154,7 @@ const StaffAppointments = ({ setActiveComponent }) => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {appt.status === 'Confirmed' && (
+                      {appt.status === 'Approved' && (
                         <button
                           className="text-pink-500 hover:text-pink-600 transition"
                           onClick={() => handleCompleteAppointment(appt.appointment_id)}
