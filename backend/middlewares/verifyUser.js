@@ -60,10 +60,34 @@ const verifyStaff = (req, res, next) => {
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
+
+// Verify customer or staff
+const verifyCustomerAndStaff = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('Decoded token:', decoded);
+    if (decoded.role !== 'customer' && (!decoded.email || !decoded.email.startsWith('staff'))) {
+      return res.status(403).json({ error: 'Access restricted to customers or staff' });
+    }
+    req.user = decoded; // Attach user data (id, role, email, etc.)
+    console.log('Customer or staff verified:', req.user);
+    next();
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
 // Export the middleware functions
 module.exports = {
   verifyCustomer,
   verifyAdmin,
-  verifyStaff
+  verifyStaff,
+  verifyCustomerAndStaff
 };
+ 
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const { createAppointment, updateAppointment, getAppointmentByCustomerId, updateAppointmentforCustomer, deleteAppointment
 , getAppointmentById, getAppointmentByCustomerIdForReschedule, getPendingAppointments, rejectAppointment, getAppointments, getCompletedAppointments ,
-getStaffAppointments } = require('../controllers/appointments/appointmentController');
+getStaffAppointments, completeAppointment } = require('../controllers/appointments/appointmentController');
 
 const { verifyCustomer , verifyAdmin, verifyStaff} = require('../middlewares/verifyUser');
 
@@ -39,5 +39,8 @@ appointmentRouter.get('/get-completed-appointments', verifyAdmin, getCompletedAp
 
 // Route for getting appointments by staff ID
 appointmentRouter.get('/staff/:staffId', verifyStaff, getStaffAppointments);
+
+// Route for completing an appointment
+appointmentRouter.put('/complete-appointment/:appointment_id', verifyStaff, completeAppointment);
 
 module.exports = appointmentRouter;

@@ -1,21 +1,70 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaBars, FaBell, FaUser, FaUserCircle, FaCog, FaSignOutAlt } from 'react-icons/fa';
+import { FaBars, FaBell, FaUser, FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import axios from '../../api/axios';
+import { jwtDecode } from 'jwt-decode';
 
 const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationCount, setNotificationCount] = useState(0);
   const profileRef = useRef(null);
+  const notificationsRef = useRef(null);
   const navigate = useNavigate();
 
+  // Fetch notifications on mount
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const decoded = jwtDecode(token);
+        const response = await axios.get(`/api/notifications/${decoded.user_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setNotifications(response.data.notifications);
+        setNotificationCount(response.data.notifications.filter(n => !n.is_read).length);
+      } catch (error) {
+        console.error('Fetch notifications error:', error);
+      }
+    };
+    fetchNotifications();
+  }, []);
+
+  // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setIsProfileOpen(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setIsNotificationsOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Mark notification as read
+  const handleNotificationClick = async (notification) => {
+    if (!notification.is_read) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.put(`/api/notifications/${notification.notification_id}/read`, {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setNotifications(prev =>
+          prev.map(n =>
+            n.notification_id === notification.notification_id ? { ...n, is_read: true } : n
+          )
+        );
+        setNotificationCount(prev => prev - 1);
+      } catch (error) {
+        console.error('Mark notification read error:', error);
+      }
+    }
+  };
 
   const profileItems = [
     { name: 'Profile', component: 'Profile', icon: <FaUserCircle /> },
@@ -26,6 +75,7 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
     if (item.component) {
       setActiveComponent(item.component);
     } else if (item.path) {
+      localStorage.removeItem('token');
       navigate(item.path);
     }
     setIsProfileOpen(false);
@@ -46,18 +96,54 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
           </h1>
         </div>
         <div className="flex items-center space-x-6">
-          <div className="relative">
-            <button className=" hover:text-pink-500 focus:outline-none transition duration-200 relative">
+          <div className="relative" ref={notificationsRef}>
+            <button
+              className="text-pink-700 hover:text-pink-500 focus:outline-none transition duration-200 relative"
+              onClick={() => {
+                setIsNotificationsOpen(!isNotificationsOpen);
+                setIsProfileOpen(false); // Close profile dropdown if open
+              }}
+            >
               <FaBell className="w-8 h-8" />
-              <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-semibold shadow-sm">
-                3
-              </span>
+              {notificationCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-semibold shadow-sm">
+                  {notificationCount}
+                </span>
+              )}
             </button>
+            {isNotificationsOpen && (
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden transition-all duration-300">
+                {notifications.length === 0 ? (
+                  <div className="px-5 py-3 text-gray-700 font-semibold">No notifications</div>
+                ) : (
+                  notifications.map(notification => (
+                    <div
+                      key={notification.notification_id}
+                      className={`px-5 py-3 text-gray-700 hover:bg-pink-100 hover:text-pink-500 rounded-3xl transition duration-300 ease-in-out transform hover:scale-105 cursor-pointer ${
+                        notification.is_read ? 'opacity-70' : 'font-semibold'
+                      }`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <p>{notification.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(notification.created_at).toLocaleString('en-US', {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
           <div className="relative" ref={profileRef}>
             <button
-              className=" hover:text-pink-500 focus:outline-none transition duration-200"
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              className="text-pink-700 hover:text-pink-500 focus:outline-none transition duration-200"
+              onClick={() => {
+                setIsProfileOpen(!isProfileOpen);
+                setIsNotificationsOpen(false); // Close notifications dropdown if open
+              }}
             >
               <FaUser className="w-8 h-8" />
             </button>

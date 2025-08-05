@@ -9,6 +9,7 @@ const invoiceRoutes = require('./routes/invoiceRouter');
 const expenseRoutes = require('./routes/expenseRouter'); 
 const feedbackRoutes = require('./routes/feedbackRouter'); 
 const customerRoutes = require('./routes/customerRouter');  
+const notificationRoutes = require('./routes/notificationRouter'); // Assuming you have a notificationRouter
 const app = express();
 const server = require('http').createServer(app);
 const cors = require('cors');
@@ -28,6 +29,7 @@ app.use('/api/invoices', invoiceRoutes); // Add invoice routes
 app.use('/api/expenses', expenseRoutes); // Add expense routes
 app.use('/api/feedback', feedbackRoutes); // Add feedback routes
 app.use('/api/customers', customerRoutes); // Add customer routes
+app.use('/api/notifications', notificationRoutes); // Add notification routes
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
