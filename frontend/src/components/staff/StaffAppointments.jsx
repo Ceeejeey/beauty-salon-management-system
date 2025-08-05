@@ -106,7 +106,7 @@ const StaffAppointments = ({ setActiveComponent }) => {
         <FaTasks className="mr-3 text-pink-500" /> Assigned Appointments
       </h2>
       {error && <div className="text-red-500 mb-4">{error}</div>}
-      <div className="appointments-scroll max-h-[calc(100vh-5rem)] overflow-y-auto">
+     
         <>
           <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
             <thead>
@@ -170,7 +170,7 @@ const StaffAppointments = ({ setActiveComponent }) => {
             </tbody>
           </table>
         </>
-      </div>
+      
       <div className="mt-8 flex justify-center">
         <button
           className="flex items-center justify-center bg-white px-6 py-3 rounded-xl font-semibold text-pink-700 hover:bg-pink-100 hover:text-pink-500 shadow-xl hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"

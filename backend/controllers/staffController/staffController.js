@@ -257,11 +257,80 @@ const getStaffById = async (req, res) => {
   }
 };
 
+// Get staff attendance for today
+const getStaffAttendance = async (req, res) => {
+  const { staffId } = req.params;
+  const currentDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Colombo' });
+  try {
+    const userId = req.user.user_id;
+    if (parseInt(staffId) !== userId) {
+      return res.status(403).json({ error: 'Access restricted to your own attendance' });
+    }
+    const [attendance] = await pool.execute(
+      `SELECT present
+       FROM staff_attendance
+       WHERE staff_id = ? AND date = ?`,
+      [staffId, currentDate]
+    );
+    res.status(200).json({
+      message: 'Attendance retrieved successfully',
+      present: attendance.length > 0 ? attendance[0].present : 0, // Default to Absent
+    });
+  } catch (error) {
+    console.error('Get staff attendance error:', error);
+    res.status(500).json({ error: 'Server error during attendance retrieval' });
+  }
+};
+
+// Set staff attendance for today
+const setStaffAttendance = async (req, res) => {
+  const { staffId } = req.params;
+  const { date, present } = req.body;
+  const currentDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Colombo' });
+  if (date !== currentDate) {
+    return res.status(400).json({ error: 'Attendance can only be set for today' });
+  }
+  if (![0, 1].includes(present)) {
+    return res.status(400).json({ error: 'Present must be 0 (Absent) or 1 (Present)' });
+  }
+  try {
+    const userId = req.user.user_id;
+    if (parseInt(staffId) !== userId) {
+      return res.status(403).json({ error: 'Access restricted to your own attendance' });
+    }
+    const [existing] = await pool.execute(
+      `SELECT attendance_id
+       FROM staff_attendance
+       WHERE staff_id = ? AND date = ?`,
+      [staffId, date]
+    );
+    if (existing.length > 0) {
+      await pool.execute(
+        `UPDATE staff_attendance
+         SET present = ?
+         WHERE staff_id = ? AND date = ?`,
+        [present, staffId, date]
+      );
+    } else {
+      await pool.execute(
+        `INSERT INTO staff_attendance (staff_id, date, present)
+         VALUES (?, ?, ?)`,
+        [staffId, date, present]
+      );
+    }
+    res.status(200).json({ message: 'Attendance updated successfully', present });
+  } catch (error) {
+    console.error('Set staff attendance error:', error);
+    res.status(500).json({ error: 'Server error during attendance update' });
+  }
+};
 
 module.exports = {
   createStaff: [createStaff],
   getStaff: [getStaff],
   getStaffById: [getStaffById],
   updateStaff: [updateStaff],
+  getStaffAttendance: [getStaffAttendance],
+  setStaffAttendance: [setStaffAttendance],
   deleteStaff: [deleteStaff],
 };

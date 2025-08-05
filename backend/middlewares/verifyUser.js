@@ -47,9 +47,11 @@ const verifyStaff = (req, res, next) => {
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== 'staff') {
+    console.log('Decoded token:', decoded);
+    if (!decoded.email || !decoded.email.startsWith('staff')) {
       return res.status(403).json({ error: 'Access restricted to staff' });
     }
+
     req.user = decoded; // Attach user data (id, role, etc.)
     console.log('Staff verified:', req.user);
     next();
