@@ -11,10 +11,14 @@ const Hero = () => {
           Manage appointments, clients, and services with our premium beauty salon system. Designed for elegance and efficiency.
         </p>
         <div className="space-x-4">
-          <button className="px-6 py-3 bg-rose-500 text-white font-medium rounded-md hover:bg-rose-600 transition font-poppins cursor-pointer">
+          <button className="px-6 py-3 bg-rose-500 text-white font-medium rounded-md hover:bg-rose-600 transition font-poppins cursor-pointer"
+            onClick={() => window.location.href = '/signup'}
+          >
             Get Started
           </button>
-          <button className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition font-poppins cursor-pointer">
+          <button className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition font-poppins cursor-pointer"
+            onClick={() => window.location.href = '/about-us'}
+          >
             Learn More
           </button>
         </div>
