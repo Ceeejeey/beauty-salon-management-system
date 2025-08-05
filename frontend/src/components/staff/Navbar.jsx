@@ -1,9 +1,25 @@
 import React, { useState } from 'react';
-import { FaUserAlt } from 'react-icons/fa';
+import { FaUserAlt, FaSignOutAlt } from 'react-icons/fa';
 import StaffSidebar from './Sidebar';
+import axios from '../../api/axios';
 
 const StaffNavbar = ({ staffName, setActiveComponent }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await axios.post('/api/auth/signout');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      setIsSidebarOpen(false); // Close sidebar on mobile
+    } catch (error) {
+      console.error('Sign out error:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/signin';
+      setIsSidebarOpen(false);
+    }
+  };
 
   return (
     <div className="fixed top-0 left-0 right-0 h-[4.5rem] sm:h-[5rem] bg-white shadow-lg z-30 font-poppins">
@@ -27,9 +43,19 @@ const StaffNavbar = ({ staffName, setActiveComponent }) => {
           </button>
           <h1 className="text-xl sm:text-2xl font-bold text-pink-700 ml-4">Staff Dashboard</h1>
         </div>
-        <div className="flex items-center">
-          <FaUserAlt className="mr-2 text-pink-500" />
-          <span className="text-gray-700 hidden sm:inline">Welcome, {staffName}</span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center">
+            <FaUserAlt className="mr-2 text-pink-500" />
+            <span className="text-gray-700 hidden sm:inline">Welcome, {staffName}</span>
+          </div>
+          <button
+            className="flex items-center text-pink-500 hover:text-pink-600 transition duration-200 focus:outline-none focus:ring-2 focus:ring-pink-500 rounded"
+            onClick={handleSignOut}
+            aria-label="Sign out"
+          >
+            <FaSignOutAlt className="mr-1" />
+            <span className="hidden sm:inline">Sign Out</span>
+          </button>
         </div>
       </div>
       {isSidebarOpen && (
@@ -48,6 +74,7 @@ const StaffNavbar = ({ staffName, setActiveComponent }) => {
                 setIsSidebarOpen(false);
                 setActiveComponent(comp);
               }}
+              handleSignOut={handleSignOut}
             />
           </div>
         </>

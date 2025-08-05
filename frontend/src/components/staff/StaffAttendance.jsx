@@ -110,7 +110,7 @@ const SetAttendance = ({ setActiveComponent }) => {
           ) : (
             <>
               <p className="text-gray-700 text-lg mb-4">
-                Set your attendance for today ({new Date(currentDate).toLocaleDateString('en-US', {
+                Set your attendance for today ({new Date(currentDate).toLocaleDateString('en-CA', {
                   timeZone: 'Asia/Colombo',
                 })}).
               </p>
