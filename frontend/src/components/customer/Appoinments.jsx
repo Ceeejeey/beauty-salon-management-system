@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaCalendarAlt, FaHistory } from 'react-icons/fa';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 import axios from '../../api/axios';
 
 const Appointments = ({ setActiveComponent }) => {
@@ -11,6 +13,9 @@ const Appointments = ({ setActiveComponent }) => {
   });
   const [services, setServices] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [blockedSlots, setBlockedSlots] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
 
@@ -24,7 +29,59 @@ const Appointments = ({ setActiveComponent }) => {
     return slots;
   };
 
-  // Fetch services
+  // Check if a time slot is in the past for the current date in Sri Lanka (UTC+05:30)
+  const isPastTimeSlot = (slot, selectedDate) => {
+    const sriLankaNow = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo' })
+    );
+    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+    const currentDateStr = sriLankaNow.toISOString().split('T')[0];
+
+    if (selectedDateStr !== currentDateStr) {
+      return false; // Allow all slots for future dates
+    }
+
+    const [slotHour, slotMinute] = slot.split(':').map(Number);
+    const slotTime = new Date(selectedDate);
+    slotTime.setHours(slotHour, slotMinute, 0);
+
+    return slotTime < sriLankaNow;
+  };
+
+  // Check if date is blocked
+  const isDateBlocked = (date) => {
+    const formattedDate = date.toISOString().split('T')[0];
+    return blockedSlots.includes(formattedDate);
+  };
+
+  // Validate form before submission
+  const validateForm = () => {
+    if (!formData.service_id) {
+      return 'Please select a service';
+    }
+    if (!formData.appointment_date || !/^\d{4}-\d{2}-\d{2}$/.test(formData.appointment_date)) {
+      return 'Please select a valid date';
+    }
+    if (isDateBlocked(new Date(formData.appointment_date))) {
+      return 'Selected date is blocked by admin';
+    }
+    if (!formData.appointment_time || !/^\d{2}:\d{2}$/.test(formData.appointment_time)) {
+      return 'Please select a valid time slot';
+    }
+
+    // Check if date/time is in the past
+    const sriLankaNow = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo' })
+    );
+    const appointmentDateTime = new Date(`${formData.appointment_date}T${formData.appointment_time}:00`);
+    if (appointmentDateTime < sriLankaNow) {
+      return 'Cannot book appointments in the past';
+    }
+
+    return null;
+  };
+
+  // Fetch services and time slots
   useEffect(() => {
     const fetchServices = async () => {
       try {
@@ -41,6 +98,52 @@ const Appointments = ({ setActiveComponent }) => {
     setTimeSlots(generateTimeSlots());
   }, []);
 
+  // Fetch booked and blocked slots for selected date
+  useEffect(() => {
+    if (selectedDate) {
+      const fetchSlots = async () => {
+        try {
+          const formattedDate = selectedDate.toISOString().split('T')[0];
+          const response = await axios.get(`/api/appointments/available-slots/${formattedDate}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          });
+          // Normalize booked slots to HH:MM
+          const normalizedBooked = response.data.bookedSlots.map(slot => 
+            slot.length > 5 ? slot.slice(0, 5) : slot
+          );
+          // Normalize blocked slots to HH:MM or date
+          const normalizedBlocked = response.data.blockedSlots.map(slot => 
+            slot.block_time ? slot.block_time.slice(0, 5) : slot.block_date
+          );
+          setBookedSlots(normalizedBooked);
+          setBlockedSlots(normalizedBlocked);
+          console.log('Booked slots fetched:', normalizedBooked);
+          console.log('Blocked slots fetched:', normalizedBlocked);
+          console.log('Time slots:', timeSlots);
+        } catch (err) {
+          setError(err.response?.data?.error || 'Failed to fetch slots');
+        }
+      };
+      fetchSlots();
+    }
+  }, [selectedDate, timeSlots]);
+
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    setFormData((prev) => ({
+      ...prev,
+      appointment_date: date.toISOString().split('T')[0],
+      appointment_time: '', // Reset time when date changes
+    }));
+  };
+
+  const handleTimeSlotSelect = (time) => {
+    setFormData((prev) => ({
+      ...prev,
+      appointment_time: time,
+    }));
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -54,6 +157,12 @@ const Appointments = ({ setActiveComponent }) => {
     setSuccess(null);
     setError(null);
 
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     try {
       const payload = {
         service: formData.service_id,
@@ -61,11 +170,15 @@ const Appointments = ({ setActiveComponent }) => {
         time: formData.appointment_time,
         notes: formData.notes || null,
       };
+      console.log('Submitting payload:', payload);
       const response = await axios.post('/api/appointments/create-appointment', payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       setSuccess(response.data.message);
       setFormData({ service_id: '', appointment_date: '', appointment_time: '', notes: '' });
+      setSelectedDate(null);
+      setBookedSlots([]);
+      setBlockedSlots([]);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to book appointment');
     }
@@ -101,82 +214,147 @@ const Appointments = ({ setActiveComponent }) => {
           .form-scroll::-webkit-scrollbar-thumb:hover {
             background: #db2777; /* pink-600 */
           }
+          .react-calendar {
+            border: none;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            background: white;
+            padding: 1rem;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          .react-calendar__tile--active {
+            background: #ec4899 !important; /* pink-500 */
+            color: white !important;
+          }
+          .react-calendar__tile--active:hover {
+            background: #db2777 !important; /* pink-600 */
+          }
+          .react-calendar__tile--now {
+            background: #fce7f3 !important; /* pink-100 */
+          }
+          .react-calendar__tile--disabled {
+            background: #e5e7eb !important; /* gray-200 */
+            color: #6b7280 !important; /* gray-500 */
+            cursor: not-allowed;
+          }
         `}
       </style>
       <h2 className="text-3xl sm:text-4xl font-bold text-pink-700 mb-6 flex items-center">
         <FaCalendarAlt className="mr-3 text-pink-500" /> Book an Appointment
       </h2>
       <p className="text-gray-700 text-lg mb-8">
-        Schedule your next salon visit with ease. Select a service, date, and time that suits you.
+        Schedule your next salon visit with ease. Select a date from the calendar, choose an available time slot, and complete the booking form.
       </p>
       {success && <div className="text-green-500 mb-4">{success}</div>}
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
-        <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <label className="block text-gray-700 font-semibold mb-2">Select Service</label>
-            <select
-              name="service_id"
-              value={formData.service_id}
-              onChange={handleInputChange}
-              className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
-              required
+        <h3 className="text-xl font-semibold text-pink-700 mb-4">Select a Date</h3>
+        <Calendar
+          onChange={handleDateChange}
+          value={selectedDate}
+          minDate={new Date()}
+          tileDisabled={({ date }) => isDateBlocked(date)}
+          className="mb-6"
+        />
+        {selectedDate && !isDateBlocked(selectedDate) && (
+          <>
+            <h3 className="text-xl font-semibold text-pink-700 mb-4">Available Time Slots</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+              {timeSlots.map((slot) => {
+                const isDisabled = bookedSlots.includes(slot) || blockedSlots.includes(slot) || isPastTimeSlot(slot, selectedDate);
+                return (
+                  <button
+                    key={slot}
+                    onClick={() => handleTimeSlotSelect(slot)}
+                    disabled={isDisabled}
+                    className={`p-3 rounded-xl font-semibold transition duration-300 ${
+                      isDisabled
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : formData.appointment_time === slot
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-pink-100 text-pink-700 hover:bg-pink-200 hover:scale-105'
+                    }`}
+                  >
+                    {new Date(`1970-01-01T${slot}:00`).toLocaleTimeString([], {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {selectedDate && isDateBlocked(selectedDate) && (
+          <p className="text-red-500 font-semibold">This date is blocked by admin and cannot be booked.</p>
+        )}
+        {formData.appointment_date && formData.appointment_time && (
+          <form onSubmit={handleSubmit}>
+            <h3 className="text-xl font-semibold text-pink-700 mb-4">Complete Your Booking</h3>
+            <div className="mb-6">
+              <label className="block text-gray-700 font-semibold mb-2">Selected Date</label>
+              <input
+                type="text"
+                value={new Date(formData.appointment_date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+                className="w-full p-3 border border-pink-200 rounded-xl bg-gray-100 text-gray-700"
+                disabled
+              />
+            </div>
+            <div className="mb-6">
+              <label className="block text-gray-700 font-semibold mb-2">Selected Time</label>
+              <input
+                type="text"
+                value={new Date(`1970-01-01T${formData.appointment_time}:00`).toLocaleTimeString([], {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+                className="w-full p-3 border border-pink-200 rounded-xl bg-gray-100 text-gray-700"
+                disabled
+              />
+            </div>
+            <div className="mb-6">
+              <label className="block text-gray-700 font-semibold mb-2">Select Service</label>
+              <select
+                name="service_id"
+                value={formData.service_id}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
+                required
+              >
+                <option value="" disabled>Select a service</option>
+                {services.map((service) => (
+                  <option key={service.service_id} value={service.service_id}>
+                    {service.name} (${service.price})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-6">
+              <label className="block text-gray-700 font-semibold mb-2">Additional Notes</label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white resize-none"
+                rows="4"
+                placeholder="Any special requests?"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-pink-600 hover:shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
             >
-              <option value="" disabled>Select a service</option>
-              {services.map((service) => (
-                <option key={service.service_id} value={service.service_id}>
-                  {service.name} (${service.price})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 font-semibold mb-2">Date</label>
-            <input
-              type="date"
-              name="appointment_date"
-              value={formData.appointment_date}
-              onChange={handleInputChange}
-              min="2025-07-29"
-              className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 font-semibold mb-2">Time</label>
-            <select
-              name="appointment_time"
-              value={formData.appointment_time}
-              onChange={handleInputChange}
-              className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
-              required
-            >
-              <option value="" disabled>Select a time</option>
-              {timeSlots.map((slot) => (
-                <option key={slot} value={slot}>
-                  {new Date(`1970-01-01T${slot}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 font-semibold mb-2">Additional Notes</label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleInputChange}
-              className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white resize-none"
-              rows="4"
-              placeholder="Any special requests?"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-pink-600 hover:shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
-          >
-            Book Appointment
-          </button>
-        </form>
+              Book Appointment
+            </button>
+          </form>
+        )}
       </div>
       <div className="flex flex-col sm:flex-row gap-4">
         <button

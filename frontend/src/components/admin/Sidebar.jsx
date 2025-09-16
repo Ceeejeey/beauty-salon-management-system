@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { FaHome, FaCut, FaCalendarAlt, FaUsers, FaDollarSign, FaGift, FaTimes, FaFileInvoice, FaComments} from 'react-icons/fa';
+import {
+  FaHome,
+  FaCut,
+  FaCalendarAlt,
+  FaUsers,
+  FaDollarSign,
+  FaGift,
+  FaTimes,
+  FaFileInvoice,
+  FaComments,
+} from 'react-icons/fa';
 
 const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
   const [isServicesOpen, setIsServicesOpen] = useState(false);
@@ -19,6 +29,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
       icon: <FaCalendarAlt className="mr-3 text-pink-500" />,
       subItems: [
         { name: 'View Appointment and Assign Staff', action: () => setActiveComponent('View Appointment and Assign Staff') },
+        { name: 'Block time slots', action: () => setActiveComponent('Block time slots') },
       ],
     },
     { name: 'Manage Staff', icon: <FaUsers className="mr-3 text-pink-500" />, action: () => setActiveComponent('Manage Staff') },
@@ -30,32 +41,35 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
 
   return (
     <div
-      className={`fixed top-25 left-0 h-[calc(100vh-5rem)] w-64 bg-white shadow-2xl z-20 transform ${
+      className={`fixed top-25 left-0 h-[calc(100vh-5rem)] w-64 bg-gradient-to-b from-pink-50 to-white shadow-xl z-20 transform ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 sidebar-transition`}
+      } lg:translate-x-0 transition-transform duration-300 ease-in-out`}
     >
       <div className="p-6">
+        {/* Mobile Close Header */}
         <div className="flex justify-between items-center mb-6 lg:hidden">
           <h2 className="text-xl font-bold text-pink-700">Admin Menu</h2>
           <FaTimes
-            className="text-pink-500 cursor-pointer"
+            className="text-pink-500 cursor-pointer hover:text-pink-700 transition"
             onClick={() => setIsSidebarOpen(false)}
           />
         </div>
-        <ul>
+
+        {/* Menu Items */}
+        <ul className="space-y-2">
           {navItems.map((item, index) => (
-            <li key={index} className="mb-2">
+            <li key={index}>
               {item.subItems ? (
                 <div>
                   <button
-                    className="flex items-center p-3 text-gray-700 hover:text-pink-500 hover:bg-pink-50 w-full text-left rounded-lg transition duration-200 border border-pink-200 rounded-lg bg-white hover:bg-pink-100"
+                    className="flex items-center p-3 text-gray-700 hover:text-pink-600 hover:bg-pink-100 w-full text-left rounded-lg transition duration-200 border border-pink-100"
                     onClick={() => {
                       if (item.name === 'Services') setIsServicesOpen(!isServicesOpen);
                       if (item.name === 'Appointments') setIsAppointmentsOpen(!isAppointmentsOpen);
                     }}
                   >
                     {item.icon}
-                    <span className="flex-1">{item.name}</span>
+                    <span className="flex-1 font-medium">{item.name}</span>
                     <span
                       className={`transform transition-transform duration-200 ${
                         (item.name === 'Services' && isServicesOpen) ||
@@ -67,18 +81,19 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
                       ▼
                     </span>
                   </button>
+                  {/* Sub Menu */}
                   <ul
-                    className={`pl-8 mt-1 overflow-hidden transition-all duration-200 ease-in-out ${
+                    className={`pl-4 mt-2 overflow-hidden transition-all duration-300 ease-in-out space-y-2 ${
                       (item.name === 'Services' && isServicesOpen) ||
                       (item.name === 'Appointments' && isAppointmentsOpen)
                         ? 'max-h-40'
                         : 'max-h-0'
-                    } dropdown-transition`}
+                    }`}
                   >
                     {item.subItems.map((subItem, subIndex) => (
                       <li key={subIndex}>
                         <button
-                          className="block p-2 text-gray-600 hover:text-pink-500 hover:bg-pink-50 w-full text-left rounded-lg transition duration-200 border border-pink-200 rounded-lg bg-white hover:bg-pink-100"
+                          className="block w-full text-left pl-10 py-2 text-sm text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition duration-200 border border-pink-100"
                           onClick={subItem.action}
                         >
                           {subItem.name}
@@ -89,11 +104,11 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
                 </div>
               ) : (
                 <button
-                  className="flex items-center p-3 text-gray-700 hover:text-pink-500 hover:bg-pink-50 w-full text-left rounded-lg transition duration-200 border border-pink-200 rounded-lg bg-white hover:bg-pink-100"
+                  className="flex items-center p-3 text-gray-700 hover:text-pink-600 hover:bg-pink-100 w-full text-left rounded-lg transition duration-200 border border-pink-100"
                   onClick={item.action}
                 >
                   {item.icon}
-                  <span>{item.name}</span>
+                  <span className="font-medium">{item.name}</span>
                 </button>
               )}
             </li>

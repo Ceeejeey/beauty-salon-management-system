@@ -9,6 +9,7 @@ import EditPromotions from '../../components/admin/EditPromotions';
 import AdminSettings from '../../components/admin/AdminSettings';
 import GenerateInvoice from '../../components/admin/GenerateInvoice';
 import AdminFeedback from '../../components/admin/AdminFeedbacks';
+import BlockSlots from '../../components/admin/BlockSlots';
 
 
 const AdminHome = ({ setActiveComponent }) => (
@@ -61,6 +62,7 @@ const AdminDashboard = () => {
     'Admin Home': () => <AdminHome setActiveComponent={setActiveComponent} />,
     'Add/Edit Services': () => <AddEditServices setActiveComponent={setActiveComponent} />,
     'View Appointment and Assign Staff': () => <ViewAssignAppointments setActiveComponent={setActiveComponent} />,
+    'Block time slots': () => <BlockSlots setActiveComponent={setActiveComponent} />,
     'Manage Staff': () => <ManageStaff setActiveComponent={setActiveComponent} />,
     'Track Expenses': () => <TrackExpenses setActiveComponent={setActiveComponent} />,
     'Edit and Make Promotions': () => <EditPromotions setActiveComponent={setActiveComponent} />,

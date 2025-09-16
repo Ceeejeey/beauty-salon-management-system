@@ -612,6 +612,179 @@ const completeAppointment = async (req, res) => {
     res.status(500).json({ error: 'Server error during appointment completion' });
   }
 };
+// Get available time slots for a date
+const getAvailableSlots = async (req, res) => {
+  try {
+    const { date } = req.params;
+
+    // Validate date format (YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+
+    // Fetch booked time slots
+    const [appointments] = await pool.execute(
+      `SELECT appointment_time FROM appointments WHERE appointment_date = ? AND status IN ('Pending', 'Approved')`,
+      [date]
+    );
+    const bookedSlots = appointments.map((appt) =>
+      appt.appointment_time.toString().slice(0, 5) // Return HH:MM
+    );
+
+    // Fetch blocked slots and dates
+    const [blocked] = await pool.execute(
+      `SELECT block_date, block_time, reason, isEntireDayBlocked FROM blocked_slots WHERE block_date = ?`,
+      [date]
+    );
+    const blockedSlots = blocked.map((slot) => ({
+      block_date: slot.block_date,
+      block_time: slot.block_time ? slot.block_time.toString().slice(0, 5) : null,
+      reason: slot.reason || null,
+      isEntireDayBlocked: slot.isEntireDayBlocked,
+    }));
+
+    res.status(200).json({ bookedSlots, blockedSlots });
+  } catch (error) {
+    console.error('Get available slots error:', error);
+    res.status(500).json({ error: 'Server error during fetching available slots' });
+  }
+};
+
+// Get all blocked slots for calendar
+const getAllBlockedSlots = async (req, res) => {
+  try {
+    const [blocked] = await pool.execute(
+      `SELECT block_date, block_time, isEntireDayBlocked FROM blocked_slots`
+    );
+    const blockedSlots = blocked.map((slot) => ({
+      block_date: slot.block_date,
+      block_time: slot.block_time ? slot.block_time.toString().slice(0, 5) : null,
+      isEntireDayBlocked: slot.isEntireDayBlocked,
+    }));
+    res.status(200).json({ blockedSlots });
+  } catch (error) {
+    console.error('Get all blocked slots error:', error);
+    res.status(500).json({ error: 'Server error during fetching all blocked slots' });
+  }
+};
+
+// Block date or time slot (admin)
+const blockSlots = async (req, res) => {
+  try {
+    const { date, time, reason, isEntireDayBlocked } = req.body;
+
+    // Input validation
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+    if (time && !/^\d{2}:\d{2}$/.test(time)) {
+      return res.status(400).json({ error: 'Invalid time format. Use HH:MM' });
+    }
+
+    // Validate date is in the future (Sri Lanka time)
+    const sriLankaNow = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo' })
+    );
+    const blockDate = new Date(date);
+    if (blockDate.toISOString().split('T')[0] < sriLankaNow.toISOString().split('T')[0]) {
+      return res.status(400).json({ error: 'Cannot block past dates' });
+    }
+
+    // Check if slot/date is already blocked
+    const dbTime = time ? `${time}:00` : null;
+    const [existingBlocks] = await pool.execute(
+      `SELECT * FROM blocked_slots WHERE block_date = ? AND (block_time = ? OR (? IS NULL AND block_time IS NULL))`,
+      [date, dbTime, dbTime]
+    );
+    if (existingBlocks.length > 0) {
+      return res.status(400).json({ error: 'Date or time slot is already blocked' });
+    }
+
+    // Insert block
+    await pool.execute(
+      `INSERT INTO blocked_slots (block_date, block_time, reason, isEntireDayBlocked) VALUES (?, ?, ?, ?)`,
+      [date, dbTime, reason || null, isEntireDayBlocked || false]
+    );
+
+    res.status(201).json({ message: `Successfully blocked ${isEntireDayBlocked ? 'date' : 'time slot'}` });
+  } catch (error) {
+    console.error('Block slots error:', error);
+    res.status(500).json({ error: 'Server error during blocking slots' });
+  }
+};
+
+// Unblock time slot (admin)
+const unblockSlots = async (req, res) => {
+  try {
+    const { date, time } = req.body;
+
+    // Input validation
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+    if (!time || !/^\d{2}:\d{2}$/.test(time)) {
+      return res.status(400).json({ error: 'Time is required and must be in HH:MM format' });
+    }
+
+    // Construct dbTime
+    const dbTime = `${time}:00`;
+
+    // Check if block exists
+    const [existingBlocks] = await pool.execute(
+      `SELECT * FROM blocked_slots WHERE block_date = ? AND block_time = ? AND isEntireDayBlocked = FALSE`,
+      [date, dbTime]
+    );
+    if (existingBlocks.length === 0) {
+      return res.status(404).json({ error: 'Time slot not found' });
+    }
+
+    // Delete block
+    await pool.execute(
+      `DELETE FROM blocked_slots WHERE block_date = ? AND block_time = ? AND isEntireDayBlocked = FALSE`,
+      [date, dbTime]
+    );
+
+    res.status(200).json({ message: 'Successfully unblocked time slot' });
+  } catch (error) {
+    console.error('Unblock slots error:', error);
+    res.status(500).json({ error: 'Server error during unblocking slots' });
+  }
+};
+
+// Unblock entire date (admin)
+const unblockDate = async (req, res) => {
+  try {
+    const { date, isEntireDayBlocked } = req.body;
+
+    // Input validation
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+    if (isEntireDayBlocked !== true) {
+      return res.status(400).json({ error: 'isEntireDayBlocked must be true for unblocking an entire date' });
+    }
+
+    // Check if block exists
+    const [existingBlocks] = await pool.execute(
+      `SELECT * FROM blocked_slots WHERE block_date = ? AND isEntireDayBlocked = TRUE`,
+      [date]
+    );
+    if (existingBlocks.length === 0) {
+      return res.status(404).json({ error: 'Blocked date not found' });
+    }
+
+    // Delete block
+    await pool.execute(
+      `DELETE FROM blocked_slots WHERE block_date = ? AND isEntireDayBlocked = TRUE`,
+      [date]
+    );
+
+    res.status(200).json({ message: 'Successfully unblocked date' });
+  } catch (error) {
+    console.error('Unblock date error:', error);
+    res.status(500).json({ error: 'Server error during unblocking date' });
+  }
+};
 
 module.exports = {
   createAppointment: [createAppointment],
@@ -627,4 +800,9 @@ module.exports = {
   getCompletedAppointments: [getCompletedAppointments],
   getStaffAppointments: [getStaffAppointments],
   completeAppointment: [completeAppointment],
+  getAvailableSlots: [getAvailableSlots],
+  blockSlots: [blockSlots],
+  unblockSlots: [unblockSlots],
+  getAllBlockedSlots: [getAllBlockedSlots],
+  unblockDate: [unblockDate],
 };

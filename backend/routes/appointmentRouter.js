@@ -1,7 +1,9 @@
 const express = require('express');
 const { createAppointment, updateAppointment, getAppointmentByCustomerId, updateAppointmentforCustomer, deleteAppointment
 , getAppointmentById, getAppointmentByCustomerIdForReschedule, getPendingAppointments, rejectAppointment, getAppointments, getCompletedAppointments ,
-getStaffAppointments, completeAppointment } = require('../controllers/appointments/appointmentController');
+getStaffAppointments, completeAppointment,getAvailableSlots, blockSlots, unblockSlots ,
+getAllBlockedSlots, unblockDate
+} = require('../controllers/appointments/appointmentController');
 
 const { verifyCustomer , verifyAdmin, verifyStaff} = require('../middlewares/verifyUser');
 
@@ -42,5 +44,20 @@ appointmentRouter.get('/staff/:staffId', verifyStaff, getStaffAppointments);
 
 // Route for completing an appointment
 appointmentRouter.put('/complete-appointment/:appointment_id', verifyStaff, completeAppointment);
+
+// Route for getting available slots for a specific date
+appointmentRouter.get('/available-slots/:date',  getAvailableSlots);
+
+// Route for blocking slots
+appointmentRouter.post('/block-slots', verifyAdmin, blockSlots);
+
+// Route for unblocking slots
+appointmentRouter.post('/unblock-slots', verifyAdmin, unblockSlots);
+
+// Route for getting all blocked slots
+appointmentRouter.get('/all-blocked-slots', verifyAdmin, getAllBlockedSlots);
+
+// Route for unblocking an entire date
+appointmentRouter.post('/unblock-date', verifyAdmin, unblockDate);
 
 module.exports = appointmentRouter;
