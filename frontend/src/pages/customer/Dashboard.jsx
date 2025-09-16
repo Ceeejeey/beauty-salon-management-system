@@ -12,6 +12,7 @@ import Profile from '../../components/customer/CustomerProfile';
 import ChangePassword from '../../components/customer/ChangePassword';
 
 
+
 // Placeholder components for each section
 const DashboardHome = ({ setActiveComponent }) => (
   <div className="p-6 sm:p-10 font-poppins bg-gradient-to-br from-pink-50 to-white">
