@@ -30,6 +30,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
       subItems: [
         { name: 'View Appointment and Assign Staff', action: () => setActiveComponent('View Appointment and Assign Staff') },
         { name: 'Block time slots', action: () => setActiveComponent('Block time slots') },
+        { name: 'View Completed Appointments', action: () => setActiveComponent('View Completed Appointments') },
       ],
     },
     { name: 'Manage Staff', icon: <FaUsers className="mr-3 text-pink-500" />, action: () => setActiveComponent('Manage Staff') },
@@ -41,7 +42,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
 
   return (
     <div
-      className={`fixed top-25 left-0 h-[calc(100vh-5rem)] w-64 bg-gradient-to-b from-pink-50 to-white shadow-xl z-20 transform ${
+      className={`fixed left-0 h-[calc(100vh-5rem)] w-64 bg-gradient-to-b from-pink-50 to-white shadow-xl z-20 transform ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-300 ease-in-out`}
     >
