@@ -786,6 +786,85 @@ const unblockDate = async (req, res) => {
   }
 };
 
+// Get completed appointments (admin) with filtering
+// Get completed appointments (admin) with filtering
+const getAllCompletedAppointments = async (req, res) => {
+  try {
+    const { date, customer_name, staff_id } = req.query;
+
+    // Build SQL query for appointments
+    let query = `
+      SELECT 
+        a.appointment_id,
+        a.customer_id,
+        a.staff_id,
+        a.appointment_date,
+        a.appointment_time,
+        a.notes,
+        s.name AS service_name,
+        uc.name AS customer_name,
+        st.name AS staff_name
+      FROM appointments a
+      JOIN services s ON a.service_id = s.service_id
+      JOIN users uc ON a.customer_id = uc.user_id
+      LEFT JOIN staff st ON a.staff_id = st.user_id
+      LEFT JOIN users us ON a.staff_id = us.user_id
+      WHERE a.status = 'Completed'
+    `;
+    const params = [];
+
+    // Apply filters
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  query += ` AND DATE(a.appointment_date) = ?`;
+  params.push(`${date}`);
+    }
+
+    if (customer_name) {
+      query += ` AND uc.name LIKE ?`;
+      params.push(`%${customer_name}%`);
+    }
+    if (staff_id && !isNaN(staff_id)) {
+      query += ` AND a.staff_id = ?`;
+      params.push(staff_id);
+    }
+
+    // Order by date and time
+    query += ` ORDER BY a.appointment_date DESC, a.appointment_time DESC`;
+
+    // Execute query for appointments
+    const [appointments] = await pool.execute(query, params);
+
+    // Format appointments
+    const formattedAppointments = appointments.map((appt) => ({
+      appointment_id: appt.appointment_id,
+      customer_id: appt.customer_id,
+      staff_id: appt.staff_id,
+      customer_name: appt.customer_name,
+      staff_name: appt.staff_name || 'Unassigned',
+      service_name: appt.service_name,
+      date: appt.appointment_date,
+      time: appt.appointment_time.toString().slice(0, 5),
+      notes: appt.notes || null,
+    }));
+
+    // Fetch all staff for filter dropdown
+    const [staff] = await pool.execute(
+      `SELECT s.user_id, s.name 
+       FROM staff s 
+       ORDER BY s.name`
+       
+    );
+
+    res.status(200).json({
+      appointments: formattedAppointments,
+      staff: staff.map(s => ({ user_id: s.user_id, name: s.name })),
+    });
+  } catch (error) {
+    console.error('Get completed appointments error:', error);
+    res.status(500).json({ error: 'Server error during fetching completed appointments' });
+  }
+};
+
 module.exports = {
   createAppointment: [createAppointment],
   updateAppointmentforCustomer: [updateAppointmentforCustomer],
@@ -805,4 +884,5 @@ module.exports = {
   unblockSlots: [unblockSlots],
   getAllBlockedSlots: [getAllBlockedSlots],
   unblockDate: [unblockDate],
+  getAllCompletedAppointments: [getAllCompletedAppointments],
 };

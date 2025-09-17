@@ -2,7 +2,7 @@ const express = require('express');
 const { createAppointment, updateAppointment, getAppointmentByCustomerId, updateAppointmentforCustomer, deleteAppointment
 , getAppointmentById, getAppointmentByCustomerIdForReschedule, getPendingAppointments, rejectAppointment, getAppointments, getCompletedAppointments ,
 getStaffAppointments, completeAppointment,getAvailableSlots, blockSlots, unblockSlots ,
-getAllBlockedSlots, unblockDate
+getAllBlockedSlots, unblockDate ,getAllCompletedAppointments
 } = require('../controllers/appointments/appointmentController');
 
 const { verifyCustomer , verifyAdmin, verifyStaff} = require('../middlewares/verifyUser');
@@ -59,5 +59,8 @@ appointmentRouter.get('/all-blocked-slots', verifyAdmin, getAllBlockedSlots);
 
 // Route for unblocking an entire date
 appointmentRouter.post('/unblock-date', verifyAdmin, unblockDate);
+
+// Route for getting all completed appointments with filtering
+appointmentRouter.get('/completed', verifyAdmin, getAllCompletedAppointments);
 
 module.exports = appointmentRouter;

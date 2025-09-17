@@ -80,7 +80,7 @@ const ManageServices = () => {
       };
       let response;
       if (isEditing) {
-        response = await axios.put(`/api/services/${formData.service_id}`, payload, {
+        response = await axios.put(`/api/services/update-service/${formData.service_id}`, payload, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         setServices((prev) =>
