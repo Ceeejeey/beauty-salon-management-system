@@ -12,29 +12,13 @@ const ADMIN_EMAIL = 'admin@gmail.com';
 const ADMIN_PASSWORD = '1234';
 
 // Multer configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'public/uploads/'),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
-  },
-});
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
-    if (extname && mimetype) return cb(null, true);
-    cb(new Error('Only JPEG and PNG images are allowed'));
-  },
-});
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Signup function (for customers only)
 const signup = async (req, res) => {
   try {
     const { fullName, phone, email, birthday, password } = req.body;
-    const profilePicture = req.file ? `/uploads/${req.file.filename}` : null;
+    const profilePicture = req.file ? req.file.buffer : null; // get binary data
 
     // Input validation
     if (!fullName || !phone || !email || !password) {
@@ -76,6 +60,7 @@ const signup = async (req, res) => {
     res.status(500).json({ error: 'Server error during signup' });
   }
 };
+
 
 // Sign-in function
 const signin = async (req, res) => {

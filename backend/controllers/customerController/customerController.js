@@ -187,8 +187,74 @@ const updatePassword = async (req, res) => {
     res.status(500).json({ error: 'Server error during password update' });
   }
 };
+
+// Get all customer profiles (admin) with filtering
+const getAllCustomers = async (req, res) => {
+  try {
+    const { name, email } = req.query;
+
+    // Build SQL query for customers
+    let query = `
+      SELECT 
+        user_id,
+        name,
+        email,
+        phone,
+        birthday,
+        profile_picture,
+        created_at
+      FROM users
+      WHERE role = 'customer'
+    `;
+    const params = [];
+
+    // Apply filters
+    if (name) {
+      query += ` AND name LIKE ?`;
+      params.push(`%${name}%`);
+    }
+    if (email) {
+      query += ` AND email LIKE ?`;
+      params.push(`%${email}%`);
+    }
+
+    // Order by name
+    query += ` ORDER BY name ASC`;
+
+    // Execute query
+    const [customers] = await pool.execute(query, params);
+
+    // Format customers
+    const formattedCustomers = customers.map((customer) => ({
+      user_id: customer.user_id,
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      birthday: customer.birthday
+        ? customer.birthday.toISOString().split('T')[0]
+        : null,
+      profile_picture: customer.profile_picture
+        ? customer.profile_picture.toString('base64') // 🔑 Convert BLOB to Base64
+        : null,
+      created_at: customer.created_at.toISOString(),
+    }));
+
+    console.log('Fetched customers:', formattedCustomers);
+
+    res.status(200).json({
+      customers: formattedCustomers,
+    });
+  } catch (error) {
+    console.error('Get customer profiles error:', error);
+    res.status(500).json({ error: 'Server error during fetching customer profiles' });
+  }
+};
+
+
 module.exports = {
   getProfile: [getProfile],
   updateProfile: [updateProfile],
-updatePassword: [updatePassword],
+  updatePassword: [updatePassword],
+  getAllCustomers: [getAllCustomers],
+
 };

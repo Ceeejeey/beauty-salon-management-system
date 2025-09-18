@@ -202,7 +202,7 @@ const ViewAssignAppointments = ({ setActiveComponent }) => {
       </p>
       {success && <div className="text-green-500 mb-4">{success}</div>}
       {error && <div className="text-red-500 mb-4">{error}</div>}
-      <div className="table-container">
+      
         {appointments.length === 0 ? (
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 text-center">
             <p className="text-gray-700 text-lg">No pending appointments available.</p>
@@ -297,7 +297,7 @@ const ViewAssignAppointments = ({ setActiveComponent }) => {
             </tbody>
           </table>
         )}
-      </div>
+     
       {isRejectModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content modal-scroll">

@@ -1,6 +1,6 @@
 const express = require('express');
-const { getProfile, updateProfile,updatePassword } = require('../controllers/customerController/customerController');
-const { verifyCustomer } = require('../middlewares/verifyUser');
+const { getProfile, updateProfile,updatePassword, getAllCustomers } = require('../controllers/customerController/customerController');
+const { verifyCustomer, verifyAdmin } = require('../middlewares/verifyUser');
 
 const customerRouter = express.Router();
 
@@ -10,5 +10,7 @@ customerRouter.get('/profile', verifyCustomer, getProfile);
 customerRouter.put('/profile', verifyCustomer, updateProfile);
 // Route for updating customer password
 customerRouter.put('/update-password', verifyCustomer, updatePassword);
+// Route for getting all customers (admin access)
+customerRouter.get('/customers', verifyAdmin, getAllCustomers);
 
 module.exports = customerRouter;

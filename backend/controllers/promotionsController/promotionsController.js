@@ -129,17 +129,27 @@ const createPromotion = async (req, res) => {
 const getPromotions = async (req, res) => {
   try {
     const [promotions] = await pool.execute(
-      `SELECT p.*, s.name as service_name FROM promotions p JOIN services s ON p.service_id = s.service_id`
+      `SELECT p.*, s.name as service_name 
+       FROM promotions p 
+       JOIN services s ON p.service_id = s.service_id`
     );
+
+    // Convert LONGBLOB images to Base64
+    const formattedPromotions = promotions.map((promo) => ({
+      ...promo,
+      image: promo.image ? promo.image.toString('base64') : null, // 🔑 Convert to Base64
+    }));
+
     res.status(200).json({
       message: 'Promotions retrieved successfully',
-      promotions,
+      promotions: formattedPromotions,
     });
   } catch (error) {
     console.error('Get promotions error:', error);
     res.status(500).json({ error: 'Server error during promotions retrieval' });
   }
 };
+
 
 // Get promotion by ID
 const getPromotionById = async (req, res) => {
