@@ -34,6 +34,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
       ],
     },
     { name: 'Manage Staff', icon: <FaUsers className="mr-3 text-pink-500" />, action: () => setActiveComponent('Manage Staff') },
+    { name: 'Customer Profiles', icon: <FaUsers className="mr-3 text-pink-500" />, action: () => setActiveComponent('Customer Profiles') },
     { name: 'Track Expenses', icon: <FaDollarSign className="mr-3 text-pink-500" />, action: () => setActiveComponent('Track Expenses') },
     { name: 'Edit and Make Promotions', icon: <FaGift className="mr-3 text-pink-500" />, action: () => setActiveComponent('Edit and Make Promotions') },
     { name: 'Generate Invoice', icon: <FaFileInvoice className="mr-3 text-pink-500" />, action: () => setActiveComponent('Generate Invoice') },
@@ -87,7 +88,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
                     className={`pl-4 mt-2 overflow-hidden transition-all duration-300 ease-in-out space-y-2 ${
                       (item.name === 'Services' && isServicesOpen) ||
                       (item.name === 'Appointments' && isAppointmentsOpen)
-                        ? 'max-h-40'
+                        ? 'max-h-60'
                         : 'max-h-0'
                     }`}
                   >

@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import axios from '../../api/axios';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import axios from "../../api/axios";
+import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 
 const ManageServices = () => {
   const [formData, setFormData] = useState({
     service_id: null,
-    name: '',
-    category: '',
-    description: '',
-    price: '',
-    duration: '',
+    name: "",
+    category: "",
+    description: "",
+    price: "",
+    duration: "",
     image: null,
   });
   const [services, setServices] = useState([]);
@@ -19,49 +19,30 @@ const ManageServices = () => {
   const [imagePreview, setImagePreview] = useState(null);
 
   // Predefined categories
-  const categories = ['Hair', 'Nails', 'Spa', 'Waxing', 'Massage', 'Facial'];
+  const categories = ["Hair", "Nails", "Spa", "Waxing", "Massage", "Facial"];
 
-  // Fetch services
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const response = await axios.get('/api/services/get-services', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        const response = await axios.get("/api/services/get-services", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setServices(response.data.services);
         setSuccess(response.data.message);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch services');
+        setError(err.response?.data?.error || "Failed to fetch services");
       }
     };
     fetchServices();
   }, []);
 
+  // Input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'price' ? parseFloat(value) || '' : value,
+      [name]: name === "price" ? parseFloat(value) || "" : value,
     }));
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image size must be less than 5MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, image: reader.result }));
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setFormData((prev) => ({ ...prev, image: null }));
-      setImagePreview(null);
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -70,64 +51,115 @@ const ManageServices = () => {
     setError(null);
 
     try {
-      const payload = {
-        name: formData.name,
-        category: formData.category,
-        description: formData.description || null,
-        price: parseFloat(formData.price),
-        duration: formData.duration,
-        image: formData.image,
-      };
+      const payload = new FormData();
+      payload.append("name", formData.name);
+      payload.append("category", formData.category);
+      payload.append("description", formData.description || "");
+      payload.append("price", formData.price);
+      payload.append("duration", formData.duration);
+      if (formData.imageFile) {
+        payload.append("image", formData.imageFile); // multer reads this
+      }
+
       let response;
       if (isEditing) {
-        response = await axios.put(`/api/services/update-service/${formData.service_id}`, payload, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
+        response = await axios.put(
+          `/api/services/update-service/${formData.service_id}`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
         setServices((prev) =>
-          prev.map((service) =>
-            service.service_id === formData.service_id ? response.data.service : service
+          prev.map((s) =>
+            s.service_id === formData.service_id ? response.data.service : s
           )
         );
       } else {
-        response = await axios.post('/api/services/create-service', payload, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        response = await axios.post("/api/services/create-service", payload, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "multipart/form-data",
+          },
         });
         setServices((prev) => [...prev, response.data.service]);
       }
+
       setSuccess(response.data.message);
-      setFormData({ service_id: null, name: '', category: '', description: '', price: '', duration: '', image: null });
+      setFormData({
+        service_id: null,
+        name: "",
+        category: "",
+        description: "",
+        price: "",
+        duration: "",
+        imageFile: null,
+      });
       setImagePreview(null);
       setIsEditing(false);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save service');
+      setError(err.response?.data?.error || "Failed to save service");
     }
   };
 
+  // Image change handler
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      setFormData((prev) => ({ ...prev, imageFile: null }));
+      setImagePreview(null);
+      return;
+    }
+
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > 5) {
+      setError("Image size must be less than 5MB");
+      setFormData((prev) => ({ ...prev, imageFile: null }));
+      setImagePreview(null);
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, imageFile: file }));
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+  // Edit existing service
   const handleEdit = (service) => {
     setFormData({
       service_id: service.service_id,
       name: service.name,
       category: service.category,
-      description: service.description || '',
+      description: service.description || "",
       price: service.price,
       duration: service.duration,
       image: service.image || null,
     });
-    setImagePreview(service.image || null);
+    setImagePreview(
+      service.image ? `data:image/jpeg;base64,${service.image}` : null
+    );
     setIsEditing(true);
+    setError(null);
+    setSuccess(null);
   };
 
+  // Delete service
   const handleDelete = async (id) => {
     setSuccess(null);
     setError(null);
     try {
       const response = await axios.delete(`/api/services/get-service/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      setServices((prev) => prev.filter((service) => service.service_id !== id));
+      setServices((prev) =>
+        prev.filter((service) => service.service_id !== id)
+      );
       setSuccess(response.data.message);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete service');
+      setError(err.response?.data?.error || "Failed to delete service");
     }
   };
 
@@ -170,7 +202,9 @@ const ManageServices = () => {
           />
         </div>
         <div>
-          <label className="block text-gray-700 font-medium mb-1">Category</label>
+          <label className="block text-gray-700 font-medium mb-1">
+            Category
+          </label>
           <select
             name="category"
             value={formData.category}
@@ -178,7 +212,9 @@ const ManageServices = () => {
             className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
             required
           >
-            <option value="" disabled>Select a category</option>
+            <option value="" disabled>
+              Select a category
+            </option>
             {categories.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
@@ -187,7 +223,9 @@ const ManageServices = () => {
           </select>
         </div>
         <div>
-          <label className="block text-gray-700 font-medium mb-1">Description</label>
+          <label className="block text-gray-700 font-medium mb-1">
+            Description
+          </label>
           <textarea
             name="description"
             value={formData.description}
@@ -198,7 +236,9 @@ const ManageServices = () => {
           />
         </div>
         <div>
-          <label className="block text-gray-700 font-medium mb-1">Price ($)</label>
+          <label className="block text-gray-700 font-medium mb-1">
+            Price ($)
+          </label>
           <input
             type="number"
             name="price"
@@ -211,7 +251,9 @@ const ManageServices = () => {
           />
         </div>
         <div>
-          <label className="block text-gray-700 font-medium mb-1">Duration</label>
+          <label className="block text-gray-700 font-medium mb-1">
+            Duration
+          </label>
           <input
             type="text"
             name="duration"
@@ -243,14 +285,22 @@ const ManageServices = () => {
             type="submit"
             className="bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 hover:shadow-lg transition duration-300 font-poppins"
           >
-            {isEditing ? 'Update Service' : 'Add Service'}
+            {isEditing ? "Update Service" : "Add Service"}
           </button>
           {isEditing && (
             <button
               type="button"
               className="bg-white text-pink-700 px-4 py-2 rounded-lg border border-pink-500 hover:bg-pink-100 hover:text-pink-500 transition font-poppins"
               onClick={() => {
-                setFormData({ service_id: null, name: '', category: '', description: '', price: '', duration: '', image: null });
+                setFormData({
+                  service_id: null,
+                  name: "",
+                  category: "",
+                  description: "",
+                  price: "",
+                  duration: "",
+                  image: null,
+                });
                 setImagePreview(null);
                 setIsEditing(false);
               }}
@@ -275,10 +325,15 @@ const ManageServices = () => {
           </thead>
           <tbody>
             {services.map((service) => (
-              <tr key={service.service_id} className="border-b border-pink-100 hover:bg-pink-50">
+              <tr
+                key={service.service_id}
+                className="border-b border-pink-100 hover:bg-pink-50"
+              >
                 <td className="p-2 font-poppins">{service.name}</td>
                 <td className="p-2 font-poppins">{service.category}</td>
-                <td className="p-2 font-poppins">{service.description || 'No description'}</td>
+                <td className="p-2 font-poppins">
+                  {service.description || "No description"}
+                </td>
                 <td className="p-2 font-poppins">${service.price}</td>
                 <td className="p-2 font-poppins">{service.duration}</td>
                 <td className="p-2 font-poppins">
@@ -289,7 +344,7 @@ const ManageServices = () => {
                       className="w-16 h-16 object-cover rounded-lg"
                     />
                   ) : (
-                    'No image'
+                    "No image"
                   )}
                 </td>
                 <td className="p-2 font-poppins">
