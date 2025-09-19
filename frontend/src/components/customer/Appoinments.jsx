@@ -34,8 +34,18 @@ const Appointments = ({ setActiveComponent }) => {
     const sriLankaNow = new Date(
       new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" })
     );
-    const selectedDateStr = selectedDate.toISOString().split("T")[0];
-    const currentDateStr = sriLankaNow.toISOString().split("T")[0];
+    const selectedDateStr = selectedDate.toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "Asia/Colombo",
+    });
+    const currentDateStr = sriLankaNow.toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "Asia/Colombo",
+    });
 
     if (selectedDateStr !== currentDateStr) {
       return false; // Allow all slots for future dates
@@ -50,7 +60,12 @@ const Appointments = ({ setActiveComponent }) => {
 
   // Check if date is blocked
   const isDateBlocked = (date) => {
-    const formattedDate = date.toISOString().split("T")[0];
+    const formattedDate = date.toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "Asia/Colombo",
+    });
     return blockedSlots.includes(formattedDate);
   };
 
