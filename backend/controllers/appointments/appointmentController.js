@@ -668,6 +668,73 @@ const getAllBlockedSlots = async (req, res) => {
   }
 };
 
+// Create notification (internal function)
+const createCustomerNotification = async (user_id, appointment_id, type, message) => {
+  try {
+    // Fetch user and appointment details
+    const [users] = await pool.execute(
+      `SELECT name FROM users WHERE user_id = ?`,
+      [user_id]
+    );
+    if (users.length === 0) {
+      throw new Error('User not found');
+    }
+    const [appointments] = await pool.execute(
+      `SELECT customer_id, appointment_date, appointment_time, service_id FROM appointments WHERE appointment_id = ?`,
+      [appointment_id]
+    );
+    if (appointments.length === 0) {
+      throw new Error('Appointment not found');
+    }
+
+    const user = users[0];
+    const appointment = appointments[0];
+
+    // Fetch service name
+    const [services] = await pool.execute(
+      `SELECT name AS service_name FROM services WHERE service_id = ?`,
+      [appointment.service_id]
+    );
+    const service_name = services[0]?.service_name || 'Service';
+
+    // Format appointment date and time (Sri Lanka time)
+    const formattedDate = new Date(appointment.appointment_date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'Asia/Colombo'
+    });
+    const formattedTime = appointment.appointment_time.toLocaleString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Colombo'
+    });
+
+    // Replace placeholders in message
+    const finalMessage = message
+      .replace('{customer_name}', user.name)
+      .replace('{appointment_date}', formattedDate)
+      .replace('{appointment_time}', formattedTime)
+      .replace('{service_name}', service_name)
+      .replace('{status}', 
+        type === 'appointment_approved' ? 'Approved' : 
+        type === 'appointment_rejected' ? 'Rejected' : 
+        type === 'appointment_completed' ? 'Completed' : 
+        type === 'appointment_cancelled' ? 'Cancelled' : 'Created');
+
+    // Save notification to database
+    await pool.execute(
+      `INSERT INTO notifications (user_id, appointment_id, type, message, status, is_read)
+       VALUES (?, ?, ?, ?, 'sent', FALSE)`,
+      [user_id, appointment_id, type, finalMessage]
+    );
+  } catch (error) {
+    console.error('Create notification error:', error);
+    throw error;
+  }
+};
+
 // Block date or time slot (admin)
 const blockSlots = async (req, res) => {
   try {
@@ -700,13 +767,57 @@ const blockSlots = async (req, res) => {
       return res.status(400).json({ error: 'Date or time slot is already blocked' });
     }
 
+    // Check for prebooked appointments
+    let affectedAppointments = [];
+    if (isEntireDayBlocked) {
+      // Check entire day
+      [affectedAppointments] = await pool.execute(
+        `SELECT appointment_id, customer_id, appointment_date, appointment_time, service_id
+         FROM appointments
+         WHERE appointment_date = ? AND status IN ('Pending', 'Approved')`,
+        [date]
+      );
+    } else if (time) {
+      // Check specific time slot
+      [affectedAppointments] = await pool.execute(
+        `SELECT appointment_id, customer_id, appointment_date, appointment_time, service_id
+         FROM appointments
+         WHERE appointment_date = ? AND appointment_time = ? AND status IN ('Pending', 'Approved')`,
+        [date, `${time}:00`]
+      );
+    }
+
+    // Update affected appointments and create notifications
+    const cancelReason = reason || 'No reason provided';
+    for (const appt of affectedAppointments) {
+      // Update appointment to Cancelled and append note
+      await pool.execute(
+        `UPDATE appointments
+         SET status = 'Cancelled',
+             notes = CONCAT(COALESCE(notes, ''), '\nCancelled due to ${isEntireDayBlocked ? 'day' : 'slot'} being blocked by admin. Reason: ', ?)
+         WHERE appointment_id = ?`,
+        [cancelReason, appt.appointment_id]
+      );
+
+      // Create notification
+      const message = `Dear {customer_name}, your appointment for {service_name} on {appointment_date} at {appointment_time} has been cancelled due to ${isEntireDayBlocked ? 'day' : 'slot'} being blocked by admin. Reason: ${cancelReason}. Please rebook.`;
+      await createCustomerNotification(appt.customer_id, appt.appointment_id, 'appointment_cancelled', message);
+    }
+
     // Insert block
     await pool.execute(
-      `INSERT INTO blocked_slots (block_date, block_time, reason, isEntireDayBlocked) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO blocked_slots (block_date, block_time, reason, isEntireDayBlocked)
+       VALUES (?, ?, ?, ?)`,
       [date, dbTime, reason || null, isEntireDayBlocked || false]
     );
 
-    res.status(201).json({ message: `Successfully blocked ${isEntireDayBlocked ? 'date' : 'time slot'}` });
+    res.status(201).json({
+      message: `Successfully blocked ${isEntireDayBlocked ? 'date' : 'time slot'}${
+        affectedAppointments.length > 0
+          ? ` and cancelled ${affectedAppointments.length} appointment(s)`
+          : ''
+      }`,
+    });
   } catch (error) {
     console.error('Block slots error:', error);
     res.status(500).json({ error: 'Server error during blocking slots' });

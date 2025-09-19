@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { FaCalendarAlt, FaBan } from 'react-icons/fa';
-import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
-import axios from '../../api/axios';
+import React, { useState, useEffect } from "react";
+import { FaCalendarAlt, FaBan } from "react-icons/fa";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+import axios from "../../api/axios";
 
 const BlockSlots = ({ setActiveComponent }) => {
   const [selectedDate, setSelectedDate] = useState(null);
-  const [blockTime, setBlockTime] = useState('');
-  const [reason, setReason] = useState('');
+  const [blockTime, setBlockTime] = useState("");
+  const [reason, setReason] = useState("");
   const [blockEntireDate, setBlockEntireDate] = useState(false);
   const [blockedSlots, setBlockedSlots] = useState([]);
   const [blockedDates, setBlockedDates] = useState([]);
@@ -18,7 +18,7 @@ const BlockSlots = ({ setActiveComponent }) => {
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 9; hour <= 18; hour++) {
-      const time = `${hour.toString().padStart(2, '0')}:00`;
+      const time = `${hour.toString().padStart(2, "0")}:00`;
       slots.push(time);
     }
     return slots;
@@ -30,13 +30,18 @@ const BlockSlots = ({ setActiveComponent }) => {
   useEffect(() => {
     const fetchAllBlockedSlots = async () => {
       try {
-        const response = await axios.get('/api/appointments/all-blocked-slots', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
+        const response = await axios.get(
+          "/api/appointments/all-blocked-slots",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
         setBlockedDates(response.data.blockedSlots);
-        console.log('All blocked slots fetched:', response.data.blockedSlots);
+        console.log("All blocked slots fetched:", response.data.blockedSlots);
       } catch (err) {
-        console.error('Failed to fetch all blocked slots:', err);
+        console.error("Failed to fetch all blocked slots:", err);
       }
     };
     fetchAllBlockedSlots();
@@ -47,11 +52,16 @@ const BlockSlots = ({ setActiveComponent }) => {
     if (selectedDate) {
       const fetchBlockedSlots = async () => {
         try {
-          const formattedDate = selectedDate.toISOString().split('T')[0];
-          const response = await axios.get(`/api/appointments/available-slots/${formattedDate}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          });
-          const normalizedBlocked = response.data.blockedSlots.map(slot => ({
+          const formattedDate = selectedDate.toISOString().split("T")[0];
+          const response = await axios.get(
+            `/api/appointments/available-slots/${formattedDate}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          const normalizedBlocked = response.data.blockedSlots.map((slot) => ({
             block_date: slot.block_date,
             block_time: slot.block_time ? slot.block_time.slice(0, 5) : null,
             isEntireDayBlocked: slot.isEntireDayBlocked,
@@ -59,11 +69,15 @@ const BlockSlots = ({ setActiveComponent }) => {
           }));
           setBlockedSlots(normalizedBlocked);
           // Auto-check "Block Entire Date" if isEntireDayBlocked is true
-          const entireDayBlocked = normalizedBlocked.some(slot => slot.isEntireDayBlocked);
+          const entireDayBlocked = normalizedBlocked.some(
+            (slot) => slot.isEntireDayBlocked
+          );
           setBlockEntireDate(entireDayBlocked);
-          console.log('Blocked slots for date fetched:', normalizedBlocked);
+          console.log("Blocked slots for date fetched:", normalizedBlocked);
         } catch (err) {
-          setError(err.response?.data?.error || 'Failed to fetch blocked slots');
+          setError(
+            err.response?.data?.error || "Failed to fetch blocked slots"
+          );
         }
       };
       fetchBlockedSlots();
@@ -72,8 +86,8 @@ const BlockSlots = ({ setActiveComponent }) => {
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
-    setBlockTime('');
-    setReason('');
+    setBlockTime("");
+    setReason("");
     setBlockEntireDate(false);
     setSuccess(null);
     setError(null);
@@ -85,128 +99,159 @@ const BlockSlots = ({ setActiveComponent }) => {
     setError(null);
 
     if (!selectedDate) {
-      setError('Please select a date');
+      setError("Please select a date");
       return;
     }
     if (!blockEntireDate && !blockTime) {
-      setError('Please select a time slot or block the entire date');
+      setError("Please select a time slot or block the entire date");
       return;
     }
 
     try {
-      const formattedDate = selectedDate.toISOString().split('T')[0];
+      const formattedDate = selectedDate.toLocaleDateString("en-CA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: "Asia/Colombo",
+      });
       const payload = {
         date: formattedDate,
         time: blockEntireDate ? null : blockTime,
         reason: reason || null,
         isEntireDayBlocked: blockEntireDate,
       };
-      console.log('Submitting payload:', payload);
-      const response = await axios.post('/api/appointments/block-slots', payload, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      console.log("Submitting payload:", payload);
+      const response = await axios.post(
+        "/api/appointments/block-slots",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
       setSuccess(response.data.message);
-      setBlockTime('');
-      setReason('');
+      setBlockTime("");
+      setReason("");
       setBlockEntireDate(false);
       // Refresh blocked slots
-      const refreshedResponse = await axios.get(`/api/appointments/available-slots/${formattedDate}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      const normalizedBlocked = refreshedResponse.data.blockedSlots.map(slot => ({
-        block_date: slot.block_date,
-        block_time: slot.block_time ? slot.block_time.slice(0, 5) : null,
-        isEntireDayBlocked: slot.isEntireDayBlocked,
-        reason: slot.reason || null,
-      }));
+      const refreshedResponse = await axios.get(
+        `/api/appointments/available-slots/${formattedDate}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      const normalizedBlocked = refreshedResponse.data.blockedSlots.map(
+        (slot) => ({
+          block_date: slot.block_date,
+          block_time: slot.block_time ? slot.block_time.slice(0, 5) : null,
+          isEntireDayBlocked: slot.isEntireDayBlocked,
+          reason: slot.reason || null,
+        })
+      );
       setBlockedSlots(normalizedBlocked);
       // Refresh all blocked slots for calendar
-      const allBlockedResponse = await axios.get('/api/appointments/all-blocked-slots', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      const allBlockedResponse = await axios.get(
+        "/api/appointments/all-blocked-slots",
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
       setBlockedDates(allBlockedResponse.data.blockedSlots);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to block slot');
+      setError(err.response?.data?.error || "Failed to block slot");
     }
   };
 
   const handleUnblock = async (slot, isEntireDay) => {
     try {
-      const formattedDate = selectedDate.toISOString().split('T')[0];
+      const formattedDate = selectedDate.toISOString().split("T")[0];
       let response;
       if (isEntireDay) {
         const payload = {
           date: formattedDate,
           isEntireDayBlocked: true,
         };
-        console.log('Unblock date payload:', payload);
-        response = await axios.post('/api/appointments/unblock-date', payload, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        console.log("Unblock date payload:", payload);
+        response = await axios.post("/api/appointments/unblock-date", payload, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
       } else {
         if (!slot || !/^\d{2}:\d{2}$/.test(slot)) {
-          console.error('Invalid slot time:', slot);
-          setError('Invalid time slot selected');
+          console.error("Invalid slot time:", slot);
+          setError("Invalid time slot selected");
           return;
         }
         const payload = {
           date: formattedDate,
           time: slot,
         };
-        console.log('Unblock slot payload:', payload);
-        response = await axios.post('/api/appointments/unblock-slots', payload, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
+        console.log("Unblock slot payload:", payload);
+        response = await axios.post(
+          "/api/appointments/unblock-slots",
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
       }
       setSuccess(response.data.message);
       // Refresh blocked slots
-      const refreshedResponse = await axios.get(`/api/appointments/available-slots/${formattedDate}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      const normalizedBlocked = refreshedResponse.data.blockedSlots.map(slot => ({
-        block_date: slot.block_date,
-        block_time: slot.block_time ? slot.block_time.slice(0, 5) : null,
-        isEntireDayBlocked: slot.isEntireDayBlocked,
-        reason: slot.reason || null,
-      }));
+      const refreshedResponse = await axios.get(
+        `/api/appointments/available-slots/${formattedDate}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      const normalizedBlocked = refreshedResponse.data.blockedSlots.map(
+        (slot) => ({
+          block_date: slot.block_date,
+          block_time: slot.block_time ? slot.block_time.slice(0, 5) : null,
+          isEntireDayBlocked: slot.isEntireDayBlocked,
+          reason: slot.reason || null,
+        })
+      );
       setBlockedSlots(normalizedBlocked);
       // Refresh all blocked slots for calendar
-      const allBlockedResponse = await axios.get('/api/appointments/all-blocked-slots', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      const allBlockedResponse = await axios.get(
+        "/api/appointments/all-blocked-slots",
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
       setBlockedDates(allBlockedResponse.data.blockedSlots);
     } catch (err) {
-      console.error('Unblock error:', err);
-      setError(err.response?.data?.error || 'Failed to unblock slot/date');
+      console.error("Unblock error:", err);
+      setError(err.response?.data?.error || "Failed to unblock slot/date");
     }
   };
 
   // Calendar tile styling
   const tileClassName = ({ date }) => {
-    const formattedDate = date.toISOString().split('T')[0];
+    const formattedDate = date.toISOString().split("T")[0];
     const isFullyBlocked = blockedDates.some(
-      slot => slot.block_date === formattedDate && slot.isEntireDayBlocked
+      (slot) => slot.block_date === formattedDate && slot.isEntireDayBlocked
     );
     const hasBlockedSlots = blockedDates.some(
-      slot => slot.block_date === formattedDate && !slot.isEntireDayBlocked
+      (slot) => slot.block_date === formattedDate && !slot.isEntireDayBlocked
     );
     if (isFullyBlocked) {
-      return 'bg-red-500 text-white rounded-full';
+      return "bg-red-500 text-white rounded-full";
     }
     if (hasBlockedSlots) {
-      return 'bg-yellow-300 text-gray-800 rounded-full';
+      return "bg-yellow-300 text-gray-800 rounded-full";
     }
     return null;
   };
 
   // Disable submit button until valid date and time (or entire date) selected
   const isSubmitDisabled = !selectedDate || (!blockEntireDate && !blockTime);
-  const isFullyBlocked = blockedSlots.some(slot => slot.isEntireDayBlocked);
+  const isFullyBlocked = blockedSlots.some((slot) => slot.isEntireDayBlocked);
 
   // Check if a time slot is blocked
   const isTimeSlotBlocked = (slot) => {
     return blockedSlots.some(
-      s => s.block_time === slot && !s.isEntireDayBlocked
+      (s) => s.block_time === slot && !s.isEntireDayBlocked
     );
   };
 
@@ -260,12 +305,17 @@ const BlockSlots = ({ setActiveComponent }) => {
         <FaBan className="mr-3 text-pink-500" /> Block Dates or Time Slots
       </h2>
       <p className="text-gray-700 text-lg mb-8">
-        Block unavailable dates or specific time slots to prevent bookings. Select a date and choose to block the entire date or specific times. Entire blocked days are highlighted in red, days with blocked slots in yellow.
+        Block unavailable dates or specific time slots to prevent bookings.
+        Select a date and choose to block the entire date or specific times.
+        Entire blocked days are highlighted in red, days with blocked slots in
+        yellow.
       </p>
       {success && <div className="text-green-500 mb-4">{success}</div>}
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
-        <h3 className="text-xl font-semibold text-pink-700 mb-4">Select a Date</h3>
+        <h3 className="text-xl font-semibold text-pink-700 mb-4">
+          Select a Date
+        </h3>
         <Calendar
           onChange={handleDateChange}
           value={selectedDate}
@@ -275,7 +325,9 @@ const BlockSlots = ({ setActiveComponent }) => {
         />
         {selectedDate && (
           <>
-            <h3 className="text-xl font-semibold text-pink-700 mb-4">Block Options</h3>
+            <h3 className="text-xl font-semibold text-pink-700 mb-4">
+              Block Options
+            </h3>
             {!isFullyBlocked ? (
               <>
                 <div className="mb-6">
@@ -291,7 +343,9 @@ const BlockSlots = ({ setActiveComponent }) => {
                 </div>
                 {!blockEntireDate && (
                   <div className="mb-6">
-                    <h4 className="text-lg font-semibold text-pink-700 mb-2">Select Time Slot</h4>
+                    <h4 className="text-lg font-semibold text-pink-700 mb-2">
+                      Select Time Slot
+                    </h4>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                       {timeSlots.map((slot) => {
                         const isBlocked = isTimeSlotBlocked(slot);
@@ -302,15 +356,17 @@ const BlockSlots = ({ setActiveComponent }) => {
                             disabled={isBlocked}
                             className={`p-3 rounded-xl font-semibold transition duration-300 ${
                               isBlocked
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                                 : blockTime === slot
-                                ? 'bg-pink-500 text-white'
-                                : 'bg-pink-100 text-pink-700 hover:bg-pink-200 hover:scale-105'
+                                ? "bg-pink-500 text-white"
+                                : "bg-pink-100 text-pink-700 hover:bg-pink-200 hover:scale-105"
                             }`}
                           >
-                            {new Date(`1970-01-01T${slot}:00`).toLocaleTimeString([], {
-                              hour: 'numeric',
-                              minute: '2-digit',
+                            {new Date(
+                              `1970-01-01T${slot}:00`
+                            ).toLocaleTimeString([], {
+                              hour: "numeric",
+                              minute: "2-digit",
                             })}
                           </button>
                         );
@@ -320,7 +376,9 @@ const BlockSlots = ({ setActiveComponent }) => {
                 )}
                 <form onSubmit={handleSubmit}>
                   <div className="mb-6">
-                    <label className="block text-gray-700 font-semibold mb-2">Reason (Optional)</label>
+                    <label className="block text-gray-700 font-semibold mb-2">
+                      Reason (Optional)
+                    </label>
                     <textarea
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
@@ -334,16 +392,18 @@ const BlockSlots = ({ setActiveComponent }) => {
                     disabled={isSubmitDisabled}
                     className={`w-full px-6 py-3 rounded-xl font-semibold transition duration-300 ease-in-out transform ${
                       isSubmitDisabled
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-pink-500 text-white hover:bg-pink-600 hover:shadow-lg hover:scale-105'
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-pink-500 text-white hover:bg-pink-600 hover:shadow-lg hover:scale-105"
                     }`}
                   >
-                    Block {blockEntireDate ? 'Date' : 'Time Slot'}
+                    Block {blockEntireDate ? "Date" : "Time Slot"}
                   </button>
                 </form>
               </>
             ) : null}
-            <h3 className="text-xl font-semibold text-pink-700 mt-8 mb-4">Blocked Slots/Dates</h3>
+            <h3 className="text-xl font-semibold text-pink-700 mt-8 mb-4">
+              Blocked Slots/Dates
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {blockedSlots.length > 0 ? (
                 blockedSlots.map((slot, index) => (
@@ -353,19 +413,30 @@ const BlockSlots = ({ setActiveComponent }) => {
                   >
                     <span>
                       {slot.isEntireDayBlocked
-                        ? `Entire Date: ${new Date(slot.block_date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
+                        ? `Entire Date: ${new Date(
+                            slot.block_date
+                          ).toLocaleDateString("en-US", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
                           })}`
-                        : `Time: ${new Date(`1970-01-01T${slot.block_time}:00`).toLocaleTimeString([], {
-                            hour: 'numeric',
-                            minute: '2-digit',
+                        : `Time: ${new Date(
+                            `1970-01-01T${slot.block_time}:00`
+                          ).toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
                           })}`}
                     </span>
                     <button
-                      onClick={() => handleUnblock(slot.isEntireDayBlocked ? slot.block_date : slot.block_time, slot.isEntireDayBlocked)}
+                      onClick={() =>
+                        handleUnblock(
+                          slot.isEntireDayBlocked
+                            ? slot.block_date
+                            : slot.block_time,
+                          slot.isEntireDayBlocked
+                        )
+                      }
                       className="bg-red-500 text-white px-3 py-1 rounded-xl hover:bg-red-600 transition duration-300"
                     >
                       Unblock
@@ -373,7 +444,9 @@ const BlockSlots = ({ setActiveComponent }) => {
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500">No blocked slots or dates for this date.</p>
+                <p className="text-gray-500">
+                  No blocked slots or dates for this date.
+                </p>
               )}
             </div>
           </>
@@ -381,7 +454,7 @@ const BlockSlots = ({ setActiveComponent }) => {
       </div>
       <button
         className="flex items-center justify-center bg-white px-6 py-3 rounded-xl font-semibold text-pink-700 hover:bg-pink-100 hover:text-pink-500 shadow-xl hover:shadow-2xl transition duration-300 ease-in-out transform hover:scale-105"
-        onClick={() => setActiveComponent('Appointments')}
+        onClick={() => setActiveComponent("Appointments")}
       >
         <FaCalendarAlt className="mr-2 text-pink-500" /> Back to Booking
       </button>

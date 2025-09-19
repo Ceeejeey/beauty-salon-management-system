@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { FaCalendarAlt, FaHistory } from 'react-icons/fa';
-import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
-import axios from '../../api/axios';
+import React, { useState, useEffect } from "react";
+import { FaCalendarAlt, FaHistory } from "react-icons/fa";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+import axios from "../../api/axios";
 
 const Appointments = ({ setActiveComponent }) => {
   const [formData, setFormData] = useState({
-    service_id: '',
-    appointment_date: '',
-    appointment_time: '',
-    notes: '',
+    service_id: "",
+    appointment_date: "",
+    appointment_time: "",
+    notes: "",
   });
   const [services, setServices] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
@@ -23,7 +23,7 @@ const Appointments = ({ setActiveComponent }) => {
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 9; hour <= 18; hour++) {
-      const time = `${hour.toString().padStart(2, '0')}:00`;
+      const time = `${hour.toString().padStart(2, "0")}:00`;
       slots.push(time);
     }
     return slots;
@@ -32,16 +32,16 @@ const Appointments = ({ setActiveComponent }) => {
   // Check if a time slot is in the past for the current date in Sri Lanka (UTC+05:30)
   const isPastTimeSlot = (slot, selectedDate) => {
     const sriLankaNow = new Date(
-      new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo' })
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" })
     );
-    const selectedDateStr = selectedDate.toISOString().split('T')[0];
-    const currentDateStr = sriLankaNow.toISOString().split('T')[0];
+    const selectedDateStr = selectedDate.toISOString().split("T")[0];
+    const currentDateStr = sriLankaNow.toISOString().split("T")[0];
 
     if (selectedDateStr !== currentDateStr) {
       return false; // Allow all slots for future dates
     }
 
-    const [slotHour, slotMinute] = slot.split(':').map(Number);
+    const [slotHour, slotMinute] = slot.split(":").map(Number);
     const slotTime = new Date(selectedDate);
     slotTime.setHours(slotHour, slotMinute, 0);
 
@@ -50,32 +50,40 @@ const Appointments = ({ setActiveComponent }) => {
 
   // Check if date is blocked
   const isDateBlocked = (date) => {
-    const formattedDate = date.toISOString().split('T')[0];
+    const formattedDate = date.toISOString().split("T")[0];
     return blockedSlots.includes(formattedDate);
   };
 
   // Validate form before submission
   const validateForm = () => {
     if (!formData.service_id) {
-      return 'Please select a service';
+      return "Please select a service";
     }
-    if (!formData.appointment_date || !/^\d{4}-\d{2}-\d{2}$/.test(formData.appointment_date)) {
-      return 'Please select a valid date';
+    if (
+      !formData.appointment_date ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(formData.appointment_date)
+    ) {
+      return "Please select a valid date";
     }
     if (isDateBlocked(new Date(formData.appointment_date))) {
-      return 'Selected date is blocked by admin';
+      return "Selected date is blocked by admin";
     }
-    if (!formData.appointment_time || !/^\d{2}:\d{2}$/.test(formData.appointment_time)) {
-      return 'Please select a valid time slot';
+    if (
+      !formData.appointment_time ||
+      !/^\d{2}:\d{2}$/.test(formData.appointment_time)
+    ) {
+      return "Please select a valid time slot";
     }
 
     // Check if date/time is in the past
     const sriLankaNow = new Date(
-      new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo' })
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" })
     );
-    const appointmentDateTime = new Date(`${formData.appointment_date}T${formData.appointment_time}:00`);
+    const appointmentDateTime = new Date(
+      `${formData.appointment_date}T${formData.appointment_time}:00`
+    );
     if (appointmentDateTime < sriLankaNow) {
-      return 'Cannot book appointments in the past';
+      return "Cannot book appointments in the past";
     }
 
     return null;
@@ -85,13 +93,13 @@ const Appointments = ({ setActiveComponent }) => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const response = await axios.get('/api/services/get-services', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        const response = await axios.get("/api/services/get-services", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setServices(response.data.services);
-        console.log('Services fetched:', response.data.services);
+        console.log("Services fetched:", response.data.services);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch services');
+        setError(err.response?.data?.error || "Failed to fetch services");
       }
     };
     fetchServices();
@@ -103,25 +111,35 @@ const Appointments = ({ setActiveComponent }) => {
     if (selectedDate) {
       const fetchSlots = async () => {
         try {
-          const formattedDate = selectedDate.toISOString().split('T')[0];
-          const response = await axios.get(`/api/appointments/available-slots/${formattedDate}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          const formattedDate = selectedDate.toLocaleDateString("en-CA", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            timeZone: "Asia/Colombo",
           });
+          const response = await axios.get(
+            `/api/appointments/available-slots/${formattedDate}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
           // Normalize booked slots to HH:MM
-          const normalizedBooked = response.data.bookedSlots.map(slot => 
+          const normalizedBooked = response.data.bookedSlots.map((slot) =>
             slot.length > 5 ? slot.slice(0, 5) : slot
           );
           // Normalize blocked slots to HH:MM or date
-          const normalizedBlocked = response.data.blockedSlots.map(slot => 
+          const normalizedBlocked = response.data.blockedSlots.map((slot) =>
             slot.block_time ? slot.block_time.slice(0, 5) : slot.block_date
           );
           setBookedSlots(normalizedBooked);
           setBlockedSlots(normalizedBlocked);
-          console.log('Booked slots fetched:', normalizedBooked);
-          console.log('Blocked slots fetched:', normalizedBlocked);
-          console.log('Time slots:', timeSlots);
+          console.log("Booked slots fetched:", normalizedBooked);
+          console.log("Blocked slots fetched:", normalizedBlocked);
+          console.log("Time slots:", timeSlots);
         } catch (err) {
-          setError(err.response?.data?.error || 'Failed to fetch slots');
+          setError(err.response?.data?.error || "Failed to fetch slots");
         }
       };
       fetchSlots();
@@ -129,11 +147,19 @@ const Appointments = ({ setActiveComponent }) => {
   }, [selectedDate, timeSlots]);
 
   const handleDateChange = (date) => {
+    // Always store in ISO format (YYYY-MM-DD) for validation
+    const isoDate = date.toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "Asia/Colombo",
+    });
+
     setSelectedDate(date);
     setFormData((prev) => ({
       ...prev,
-      appointment_date: date.toISOString().split('T')[0],
-      appointment_time: '', // Reset time when date changes
+      appointment_date: isoDate, // e.g., 2025-09-19
+      appointment_time: "", // Reset time when date changes
     }));
   };
 
@@ -148,7 +174,7 @@ const Appointments = ({ setActiveComponent }) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'service_id' ? parseInt(value) || '' : value,
+      [name]: name === "service_id" ? parseInt(value) || "" : value,
     }));
   };
 
@@ -170,29 +196,38 @@ const Appointments = ({ setActiveComponent }) => {
         time: formData.appointment_time,
         notes: formData.notes || null,
       };
-      console.log('Submitting payload:', payload);
-      const response = await axios.post('/api/appointments/create-appointment', payload, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      console.log("Submitting payload:", payload);
+      const response = await axios.post(
+        "/api/appointments/create-appointment",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
       setSuccess(response.data.message);
-      setFormData({ service_id: '', appointment_date: '', appointment_time: '', notes: '' });
+      setFormData({
+        service_id: "",
+        appointment_date: "",
+        appointment_time: "",
+        notes: "",
+      });
       setSelectedDate(null);
       setBookedSlots([]);
       setBlockedSlots([]);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to book appointment');
+      setError(err.response?.data?.error || "Failed to book appointment");
     }
   };
 
   const handleViewHistory = () => {
     if (setActiveComponent) {
-      setActiveComponent('Appointment History');
+      setActiveComponent("Appointment History");
     }
   };
 
   const handleCloseAppointment = () => {
     if (setActiveComponent) {
-      setActiveComponent('Close Appointment');
+      setActiveComponent("Close Appointment");
     }
   };
 
@@ -245,12 +280,15 @@ const Appointments = ({ setActiveComponent }) => {
         <FaCalendarAlt className="mr-3 text-pink-500" /> Book an Appointment
       </h2>
       <p className="text-gray-700 text-lg mb-8">
-        Schedule your next salon visit with ease. Select a date from the calendar, choose an available time slot, and complete the booking form.
+        Schedule your next salon visit with ease. Select a date from the
+        calendar, choose an available time slot, and complete the booking form.
       </p>
       {success && <div className="text-green-500 mb-4">{success}</div>}
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
-        <h3 className="text-xl font-semibold text-pink-700 mb-4">Select a Date</h3>
+        <h3 className="text-xl font-semibold text-pink-700 mb-4">
+          Select a Date
+        </h3>
         <Calendar
           onChange={handleDateChange}
           value={selectedDate}
@@ -260,10 +298,15 @@ const Appointments = ({ setActiveComponent }) => {
         />
         {selectedDate && !isDateBlocked(selectedDate) && (
           <>
-            <h3 className="text-xl font-semibold text-pink-700 mb-4">Available Time Slots</h3>
+            <h3 className="text-xl font-semibold text-pink-700 mb-4">
+              Available Time Slots
+            </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
               {timeSlots.map((slot) => {
-                const isDisabled = bookedSlots.includes(slot) || blockedSlots.includes(slot) || isPastTimeSlot(slot, selectedDate);
+                const isDisabled =
+                  bookedSlots.includes(slot) ||
+                  blockedSlots.includes(slot) ||
+                  isPastTimeSlot(slot, selectedDate);
                 return (
                   <button
                     key={slot}
@@ -271,15 +314,15 @@ const Appointments = ({ setActiveComponent }) => {
                     disabled={isDisabled}
                     className={`p-3 rounded-xl font-semibold transition duration-300 ${
                       isDisabled
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : formData.appointment_time === slot
-                        ? 'bg-pink-500 text-white'
-                        : 'bg-pink-100 text-pink-700 hover:bg-pink-200 hover:scale-105'
+                        ? "bg-pink-500 text-white"
+                        : "bg-pink-100 text-pink-700 hover:bg-pink-200 hover:scale-105"
                     }`}
                   >
                     {new Date(`1970-01-01T${slot}:00`).toLocaleTimeString([], {
-                      hour: 'numeric',
-                      minute: '2-digit',
+                      hour: "numeric",
+                      minute: "2-digit",
                     })}
                   </button>
                 );
@@ -288,39 +331,54 @@ const Appointments = ({ setActiveComponent }) => {
           </>
         )}
         {selectedDate && isDateBlocked(selectedDate) && (
-          <p className="text-red-500 font-semibold">This date is blocked by admin and cannot be booked.</p>
+          <p className="text-red-500 font-semibold">
+            This date is blocked by admin and cannot be booked.
+          </p>
         )}
         {formData.appointment_date && formData.appointment_time && (
           <form onSubmit={handleSubmit}>
-            <h3 className="text-xl font-semibold text-pink-700 mb-4">Complete Your Booking</h3>
+            <h3 className="text-xl font-semibold text-pink-700 mb-4">
+              Complete Your Booking
+            </h3>
             <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Selected Date</label>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Selected Date
+              </label>
               <input
                 type="text"
-                value={new Date(formData.appointment_date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
+                value={new Date(formData.appointment_date).toLocaleDateString(
+                  "en-US",
+                  {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  }
+                )}
+                className="w-full p-3 border border-pink-200 rounded-xl bg-gray-100 text-gray-700"
+                disabled
+              />
+            </div>
+            <div className="mb-6">
+              <label className="block text-gray-700 font-semibold mb-2">
+                Selected Time
+              </label>
+              <input
+                type="text"
+                value={new Date(
+                  `1970-01-01T${formData.appointment_time}:00`
+                ).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
                 })}
                 className="w-full p-3 border border-pink-200 rounded-xl bg-gray-100 text-gray-700"
                 disabled
               />
             </div>
             <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Selected Time</label>
-              <input
-                type="text"
-                value={new Date(`1970-01-01T${formData.appointment_time}:00`).toLocaleTimeString([], {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-                className="w-full p-3 border border-pink-200 rounded-xl bg-gray-100 text-gray-700"
-                disabled
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Select Service</label>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Select Service
+              </label>
               <select
                 name="service_id"
                 value={formData.service_id}
@@ -328,7 +386,9 @@ const Appointments = ({ setActiveComponent }) => {
                 className="w-full p-3 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition bg-white"
                 required
               >
-                <option value="" disabled>Select a service</option>
+                <option value="" disabled>
+                  Select a service
+                </option>
                 {services.map((service) => (
                   <option key={service.service_id} value={service.service_id}>
                     {service.name} (${service.price})
@@ -337,7 +397,9 @@ const Appointments = ({ setActiveComponent }) => {
               </select>
             </div>
             <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Additional Notes</label>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Additional Notes
+              </label>
               <textarea
                 name="notes"
                 value={formData.notes}
