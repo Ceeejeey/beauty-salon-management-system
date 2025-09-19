@@ -48,6 +48,7 @@ const Feedback = ({ setActiveComponent }) => {
           ? apptResponse.data.appointments.filter((appt) => appt.status === 'Completed')
           : [];
         setAppointments(completedAppointments);
+        console.log('Completed Appointments:', completedAppointments);
 
         // Fetch feedback for all appointments
         const feedbackResponse = await axios.get('/api/feedback/get-feedback', {

@@ -1,8 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { FaBars, FaBell, FaUser, FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
-import axios from '../../api/axios';
-import { jwtDecode } from 'jwt-decode';
+import React, { useState, useRef, useEffect } from "react";
+import {
+  FaBars,
+  FaBell,
+  FaUser,
+  FaUserCircle,
+  FaSignOutAlt,
+} from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import axios from "../../api/axios";
+import { jwtDecode } from "jwt-decode";
 
 const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -17,16 +23,21 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         if (!token) return;
         const decoded = jwtDecode(token);
-        const response = await axios.get(`/api/notifications/${decoded.user_id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axios.get(
+          `/api/notifications/${decoded.user_id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setNotifications(response.data.notifications);
-        setNotificationCount(response.data.notifications.filter(n => !n.is_read).length);
+        setNotificationCount(
+          response.data.notifications.filter((n) => !n.is_read).length
+        );
       } catch (error) {
-        console.error('Fetch notifications error:', error);
+        console.error("Fetch notifications error:", error);
       }
     };
     fetchNotifications();
@@ -38,44 +49,58 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setIsProfileOpen(false);
       }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target)
+      ) {
         setIsNotificationsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Mark notification as read
   const handleNotificationClick = async (notification) => {
     if (!notification.is_read) {
       try {
-        const token = localStorage.getItem('token');
-        await axios.put(`/api/notifications/${notification.notification_id}/read`, {}, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setNotifications(prev =>
-          prev.map(n =>
-            n.notification_id === notification.notification_id ? { ...n, is_read: true } : n
+        const token = localStorage.getItem("token");
+        await axios.put(
+          `/api/notifications/${notification.notification_id}/read`,
+          {},
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.notification_id === notification.notification_id
+              ? { ...n, is_read: true }
+              : n
           )
         );
-        setNotificationCount(prev => prev - 1);
+        setNotificationCount((prev) => prev - 1);
       } catch (error) {
-        console.error('Mark notification read error:', error);
+        console.error("Mark notification read error:", error);
       }
     }
   };
 
   const profileItems = [
-    { name: 'Profile', component: 'Profile', icon: <FaUserCircle /> },
-    { name: 'Logout', component: null, icon: <FaSignOutAlt />, path: '/signin' },
+    { name: "Profile", component: "Profile", icon: <FaUserCircle /> },
+    {
+      name: "Logout",
+      component: null,
+      icon: <FaSignOutAlt />,
+      path: "/signin",
+    },
   ];
 
   const handleProfileClick = (item) => {
     if (item.component) {
       setActiveComponent(item.component);
     } else if (item.path) {
-      localStorage.removeItem('token');
+      localStorage.removeItem("token");
       navigate(item.path);
     }
     setIsProfileOpen(false);
@@ -114,25 +139,46 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
             {isNotificationsOpen && (
               <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden transition-all duration-300">
                 {notifications.length === 0 ? (
-                  <div className="px-5 py-3 text-gray-700 font-semibold">No notifications</div>
-                ) : (
-                  notifications.map(notification => (
-                    <div
-                      key={notification.notification_id}
-                      className={`px-5 py-3 text-gray-700 hover:bg-pink-100 hover:text-pink-500 rounded-3xl transition duration-300 ease-in-out transform hover:scale-105 cursor-pointer ${
-                        notification.is_read ? 'opacity-70' : 'font-semibold'
-                      }`}
-                      onClick={() => handleNotificationClick(notification)}
+                  <div className="flex flex-col items-center justify-center px-5 py-6 text-gray-500">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-8 w-8 mb-2 text-pink-300"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <p>{notification.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(notification.created_at).toLocaleString('en-US', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}
-                      </p>
-                    </div>
-                  ))
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 17h5l-1.405-1.405M19 13V8a7 7 0 00-14 0v5l-1.405 1.405A1 1 0 005 17h14z"
+                      />
+                    </svg>
+                    <p className="font-medium">No notifications</p>
+                  </div>
+                ) : (
+                  <div className="max-h-96 overflow-y-auto divide-y divide-pink-100">
+                    {notifications.map((notification) => (
+                      <div
+                        key={notification.notification_id}
+                        className={`px-5 py-3 text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition duration-300 ease-in-out cursor-pointer ${
+                          notification.is_read ? "opacity-70" : "font-semibold"
+                        }`}
+                        onClick={() => handleNotificationClick(notification)}
+                      >
+                        <p>{notification.message}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(notification.created_at).toLocaleString(
+                            "en-US",
+                            {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -155,7 +201,9 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
                     className="flex items-center w-full px-5 py-3 text-gray-700 hover:bg-pink-100 hover:text-pink-500 rounded-3xl font-semibold transition duration-300 ease-in-out transform hover:scale-105"
                     onClick={() => handleProfileClick(item)}
                   >
-                    <span className="mr-3 text-xl text-pink-500">{item.icon}</span>
+                    <span className="mr-3 text-xl text-pink-500">
+                      {item.icon}
+                    </span>
                     <span className="flex-grow">{item.name}</span>
                   </button>
                 ))}

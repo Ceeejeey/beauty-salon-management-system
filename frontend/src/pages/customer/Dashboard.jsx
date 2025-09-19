@@ -93,7 +93,7 @@ const Dashboard = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
+  
   // Mapping of sidebar item names to components
   const componentMap = {
     Dashboard: () => <DashboardHome setActiveComponent={setActiveComponent} />,
