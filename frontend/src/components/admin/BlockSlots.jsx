@@ -52,7 +52,12 @@ const BlockSlots = ({ setActiveComponent }) => {
     if (selectedDate) {
       const fetchBlockedSlots = async () => {
         try {
-          const formattedDate = selectedDate.toISOString().split("T")[0];
+          const formattedDate = selectedDate.toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "Asia/Colombo",
+    });
           const response = await axios.get(
             `/api/appointments/available-slots/${formattedDate}`,
             {
@@ -163,7 +168,12 @@ const BlockSlots = ({ setActiveComponent }) => {
 
   const handleUnblock = async (slot, isEntireDay) => {
     try {
-      const formattedDate = selectedDate.toISOString().split("T")[0];
+      const formattedDate = selectedDate.toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "Asia/Colombo",
+    });
       let response;
       if (isEntireDay) {
         const payload = {
@@ -228,7 +238,12 @@ const BlockSlots = ({ setActiveComponent }) => {
 
   // Calendar tile styling
   const tileClassName = ({ date }) => {
-    const formattedDate = date.toISOString().split("T")[0];
+    const formattedDate = date.toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "Asia/Colombo",
+    });
     const isFullyBlocked = blockedDates.some(
       (slot) => slot.block_date === formattedDate && slot.isEntireDayBlocked
     );
