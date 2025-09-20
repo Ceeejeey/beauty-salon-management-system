@@ -332,7 +332,7 @@ const ManageServices = () => {
                 <td className="p-2 font-poppins">
                   {service.description || "No description"}
                 </td>
-                <td className="p-2 font-poppins">LKR{service.price}</td>
+                <td className="p-2 font-poppins">LKR {service.price}</td>
                 <td className="p-2 font-poppins">{service.duration}</td>
                 <td className="p-2 font-poppins">
                   {service.image ? (

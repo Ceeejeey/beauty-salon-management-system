@@ -401,7 +401,7 @@ const Appointments = ({ setActiveComponent }) => {
                 </option>
                 {services.map((service) => (
                   <option key={service.service_id} value={service.service_id}>
-                    {service.name} (${service.price})
+                    {service.name} (LKR {service.price})
                   </option>
                 ))}
               </select>

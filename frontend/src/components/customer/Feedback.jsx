@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaStar, FaPlus, FaHome } from 'react-icons/fa';
 import { jwtDecode } from 'jwt-decode';
 import axios from '../../api/axios';
+import toast from 'react-hot-toast';
 
 const Feedback = ({ setActiveComponent }) => {
   const [appointments, setAppointments] = useState([]);
@@ -11,8 +12,6 @@ const Feedback = ({ setActiveComponent }) => {
     rating: '',
     comments: '',
   });
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
   const [customerId, setCustomerId] = useState(null);
 
   // Format date for display
@@ -32,7 +31,7 @@ const Feedback = ({ setActiveComponent }) => {
         // Get customer ID from token
         const token = localStorage.getItem('token');
         if (!token) {
-          setError('Please log in to view your appointments');
+          toast.error('Please log in to view your appointments');
           return;
         }
         const decoded = jwtDecode(token);
@@ -63,7 +62,7 @@ const Feedback = ({ setActiveComponent }) => {
         );
         setFeedbackData(feedbackMap);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch data');
+        toast.error(err.response?.data?.error || 'Failed to fetch data');
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
           window.location.href = '/login';
@@ -83,11 +82,9 @@ const Feedback = ({ setActiveComponent }) => {
 
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     if (!formData.appointment_id || !formData.rating) {
-      setError('Please select an appointment and a rating');
+      toast.error('Please select an appointment and a rating');
       return;
     }
 
@@ -104,7 +101,7 @@ const Feedback = ({ setActiveComponent }) => {
         ...prev,
         [formData.appointment_id]: response.data.feedback,
       }));
-      setSuccess(response.data.message);
+      toast.success(response.data.message);
       setFormData({ appointment_id: '', rating: '', comments: '' });
       // Refresh appointments to exclude those with feedback
       const apptResponse = await axios.get(`/api/appointments/get-appointment/${customerId}`, {
@@ -115,7 +112,7 @@ const Feedback = ({ setActiveComponent }) => {
         : [];
       setAppointments(completedAppointments);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to submit feedback');
+      toast.error(err.response?.data?.error || 'Failed to submit feedback');
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/login';
@@ -125,8 +122,6 @@ const Feedback = ({ setActiveComponent }) => {
 
   const handleResetForm = () => {
     setFormData({ appointment_id: '', rating: '', comments: '' });
-    setSuccess(null);
-    setError(null);
   };
 
   const handleBookNew = () => {
@@ -169,8 +164,6 @@ const Feedback = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Share your experience for a past appointment.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
         <form onSubmit={handleSubmitFeedback} className="space-y-6">
           <div>

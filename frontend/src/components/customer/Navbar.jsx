@@ -129,7 +129,7 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
                 setIsProfileOpen(false); // Close profile dropdown if open
               }}
             >
-              <FaBell className="w-8 h-8" />
+              <FaBell className="w-8 h-8 cursor-pointer" />
               {notificationCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-semibold shadow-sm">
                   {notificationCount}
@@ -191,7 +191,7 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
                 setIsNotificationsOpen(false); // Close notifications dropdown if open
               }}
             >
-              <FaUser className="w-8 h-8" />
+              <FaUser className="w-8 h-8 cursor-pointer" />
             </button>
             {isProfileOpen && (
               <div className="absolute right-0 mt-3 w-56 bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden transition-all duration-300">

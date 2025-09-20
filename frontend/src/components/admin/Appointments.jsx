@@ -47,6 +47,8 @@ const ViewAssignAppointments = ({ setActiveComponent }) => {
     fetchData();
   }, []);
 
+  
+
   // Format time to 12-hour format
   const formatTime = (time) => {
     return new Date(`1970-01-01T${time}`).toLocaleTimeString([], {
