@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { FaCalendarAlt, FaUsers } from "react-icons/fa";
 import axios from "../../api/axios";
+import toast from "react-hot-toast";
 
 const CustomerProfiles = ({ setActiveComponent }) => {
   const [customers, setCustomers] = useState([]);
   const [nameFilter, setNameFilter] = useState("");
   const [emailFilter, setEmailFilter] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   // Fetch customer profiles
   const fetchCustomers = async () => {
     setLoading(true);
-    setError(null);
     try {
       const params = {};
       if (nameFilter) params.name = nameFilter;
@@ -24,7 +23,7 @@ const CustomerProfiles = ({ setActiveComponent }) => {
       setCustomers(response.data.customers);
       console.log("Customer profiles fetched:", response.data.customers);
     } catch (err) {
-      setError(
+      toast.error(
         err.response?.data?.error || "Failed to fetch customer profiles"
       );
     } finally {
@@ -81,7 +80,6 @@ const CustomerProfiles = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         View all registered customer profiles, filterable by name or email.
       </p>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
         <h3 className="text-xl font-semibold text-pink-700 mb-4">
           Filter Customers

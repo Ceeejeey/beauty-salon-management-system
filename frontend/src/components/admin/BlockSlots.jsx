@@ -3,6 +3,7 @@ import { FaCalendarAlt, FaBan } from "react-icons/fa";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import axios from "../../api/axios";
+import { toast } from 'react-hot-toast';
 
 const BlockSlots = ({ setActiveComponent }) => {
   const [selectedDate, setSelectedDate] = useState(null);
@@ -11,8 +12,6 @@ const BlockSlots = ({ setActiveComponent }) => {
   const [blockEntireDate, setBlockEntireDate] = useState(false);
   const [blockedSlots, setBlockedSlots] = useState([]);
   const [blockedDates, setBlockedDates] = useState([]);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
 
   // Generate time slots (09:00 AM to 06:00 PM, hourly)
   const generateTimeSlots = () => {
@@ -80,7 +79,7 @@ const BlockSlots = ({ setActiveComponent }) => {
           setBlockEntireDate(entireDayBlocked);
           console.log("Blocked slots for date fetched:", normalizedBlocked);
         } catch (err) {
-          setError(
+          toast.error(
             err.response?.data?.error || "Failed to fetch blocked slots"
           );
         }
@@ -94,21 +93,17 @@ const BlockSlots = ({ setActiveComponent }) => {
     setBlockTime("");
     setReason("");
     setBlockEntireDate(false);
-    setSuccess(null);
-    setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     if (!selectedDate) {
-      setError("Please select a date");
+      toast.error("Please select a date");
       return;
     }
     if (!blockEntireDate && !blockTime) {
-      setError("Please select a time slot or block the entire date");
+      toast.error("Please select a time slot or block the entire date");
       return;
     }
 
@@ -133,7 +128,7 @@ const BlockSlots = ({ setActiveComponent }) => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      setSuccess(response.data.message);
+      toast.success(response.data.message);
       setBlockTime("");
       setReason("");
       setBlockEntireDate(false);
@@ -162,7 +157,7 @@ const BlockSlots = ({ setActiveComponent }) => {
       );
       setBlockedDates(allBlockedResponse.data.blockedSlots);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to block slot");
+      toast.error(err.response?.data?.error || "Failed to block slot");
     }
   };
 
@@ -187,7 +182,7 @@ const BlockSlots = ({ setActiveComponent }) => {
       } else {
         if (!slot || !/^\d{2}:\d{2}$/.test(slot)) {
           console.error("Invalid slot time:", slot);
-          setError("Invalid time slot selected");
+          toast.error("Invalid time slot selected");
           return;
         }
         const payload = {
@@ -205,7 +200,7 @@ const BlockSlots = ({ setActiveComponent }) => {
           }
         );
       }
-      setSuccess(response.data.message);
+      toast.success(response.data.message);
       // Refresh blocked slots
       const refreshedResponse = await axios.get(
         `/api/appointments/available-slots/${formattedDate}`,
@@ -232,7 +227,7 @@ const BlockSlots = ({ setActiveComponent }) => {
       setBlockedDates(allBlockedResponse.data.blockedSlots);
     } catch (err) {
       console.error("Unblock error:", err);
-      setError(err.response?.data?.error || "Failed to unblock slot/date");
+      toast.error(err.response?.data?.error || "Failed to unblock slot/date");
     }
   };
 
@@ -325,8 +320,6 @@ const BlockSlots = ({ setActiveComponent }) => {
         Entire blocked days are highlighted in red, days with blocked slots in
         yellow.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
         <h3 className="text-xl font-semibold text-pink-700 mb-4">
           Select a Date

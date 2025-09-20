@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaUsers, FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 import axios from '../../api/axios';
 import { jwtDecode } from 'jwt-decode';
+import { toast } from 'react-hot-toast';
 
 const ManageStaff = ({ setActiveComponent }) => {
   const [staff, setStaff] = useState([]);
@@ -18,8 +19,6 @@ const ManageStaff = ({ setActiveComponent }) => {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
 
   // Fetch staff and appointments
   useEffect(() => {
@@ -27,12 +26,12 @@ const ManageStaff = ({ setActiveComponent }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          setError('Please log in as an admin to manage staff');
+          toast.error('Please log in as an admin to manage staff');
           return;
         }
         const decoded = jwtDecode(token);
         if (decoded.role !== 'admin') {
-          setError('Access restricted to admins');
+          toast.error('Access restricted to admins');
           return;
         }
 
@@ -42,9 +41,9 @@ const ManageStaff = ({ setActiveComponent }) => {
         ]);
         setStaff(staffResponse.data.staff);
         setAppointments(appointmentsResponse.data.appointments);
-        setSuccess('Data retrieved successfully');
+        toast.success('Data retrieved successfully');
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch data');
+        toast.error(err.response?.data?.error || 'Failed to fetch data');
       }
     };
     fetchData();
@@ -78,32 +77,30 @@ const ManageStaff = ({ setActiveComponent }) => {
   // Handle form submission (add/edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     // Client-side validation
     if (!formData.name || !formData.email || !formData.role || !formData.contact) {
-      setError('Name, email, role, and contact are required');
+      toast.error('Name, email, role, and contact are required');
       return;
     }
     if (!isEditing && !formData.password) {
-      setError('Password is required for new staff');
+      toast.error('Password is required for new staff');
       return;
     }
     if (formData.password && formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+      toast.error('Password must be at least 8 characters');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('Invalid email format');
+      toast.error('Invalid email format');
       return;
     }
     if (!/^\+?\d{10,15}$/.test(formData.contact.replace(/[\s-]/g, ''))) {
-      setError('Invalid contact number');
+      toast.error('Invalid contact number');
       return;
     }
     if (!['0', '1'].includes(formData.availability)) {
-      setError('Availability must be 0 or 1');
+      toast.error('Availability must be 0 or 1');
       return;
     }
 
@@ -131,20 +128,20 @@ const ManageStaff = ({ setActiveComponent }) => {
             s.user_id === formData.id ? response.data.staff : s
           )
         );
-        setSuccess('Staff updated successfully');
+        toast.success('Staff updated successfully');
       } else {
         const response = await axios.post('/api/staff/create-staff', data, {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
         });
         setStaff([...staff, response.data.staff]);
-        setSuccess('Staff created successfully');
+        toast.success('Staff created successfully');
       }
       // Reset form
       setFormData({ id: null, name: '', email: '', password: '', role: '', contact: '', availability: '1', profile_picture: null });
       setImagePreview(null);
       setIsEditing(false);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save staff');
+      toast.error(err.response?.data?.error || 'Failed to save staff');
     }
   };
 
@@ -162,8 +159,6 @@ const ManageStaff = ({ setActiveComponent }) => {
     });
     setImagePreview(staffMember.profile_picture);
     setIsEditing(true);
-    setSuccess(null);
-    setError(null);
   };
 
   // Handle delete button click
@@ -174,10 +169,9 @@ const ManageStaff = ({ setActiveComponent }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setStaff(staff.filter((s) => s.user_id !== id));
-      setSuccess('Staff deleted successfully');
-      setError(null);
+      toast.success('Staff deleted successfully');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete staff');
+      toast.error(err.response?.data?.error || 'Failed to delete staff');
     }
   };
 
@@ -224,8 +218,6 @@ const ManageStaff = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         View staff performance, availability, and manage staff records.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="staff-scroll">
         {/* Form */}
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
@@ -337,8 +329,6 @@ const ManageStaff = ({ setActiveComponent }) => {
                     setFormData({ id: null, name: '', email: '', password: '', role: '', contact: '', availability: '1', profile_picture: null });
                     setImagePreview(null);
                     setIsEditing(false);
-                    setSuccess(null);
-                    setError(null);
                   }}
                 >
                   Cancel

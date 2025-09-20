@@ -6,7 +6,7 @@ const services = [
   {
     id: 1,
     title: 'Haircut & Styling',
-    price: '$50',
+    price: 'LKR50',
     icon: <FaCut className="w-8 h-8 text-pink-500" />,
     image: '/assets/customer/haircut.jpg', // Absolute path in public folder
   },
@@ -14,7 +14,7 @@ const services = [
     id: 2,
     title: 'Manicure & Pedicure',
     description: 'Indulge in a luxurious nail treatment for perfectly polished hands and feet.',
-    price: '$40',
+    price: 'LKR40',
     icon: <FaHands className="w-8 h-8 text-pink-500" />,
     image: '/assets/customer/manicure.jpg',
   },
@@ -22,7 +22,7 @@ const services = [
     id: 3,
     title: 'Facial Treatment',
     description: 'Rejuvenate your skin with our deep-cleansing and hydrating facial.',
-    price: '$60',
+    price: 'LKR60',
     icon: <FaSpa className="w-8 h-8 text-pink-500" />,
     image: '/assets/customer/facial_treatment.jpg',
   },
@@ -55,7 +55,7 @@ const Services = ({ setActiveComponent }) => {
                   src={service.image}
                   alt={service.title}
                   className="w-full h-full object-cover"
-                  onError={(e) => (e.target.src = `https://via.placeholder.com/300x200?text=${service.title}`)}
+                  onError={(e) => (e.target.src = `https://via.placeholder.com/300x200?text=LKR{service.title}`)}
                 />
               </div>
               <div className="p-5">

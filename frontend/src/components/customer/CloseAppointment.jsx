@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { FaCalendarAlt, FaHistory } from 'react-icons/fa';
 import axios from '../../api/axios';
 import { jwtDecode } from 'jwt-decode';
+import { toast } from 'react-hot-toast';
 
 const CloseAppointment = ({ setActiveComponent }) => {
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [services, setServices] = useState([]);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [formData, setFormData] = useState({
@@ -37,7 +36,7 @@ const CloseAppointment = ({ setActiveComponent }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          setError('Please log in to view your appointments');
+          toast.error('Please log in to view your appointments');
           return;
         }
         const decoded = jwtDecode(token);
@@ -49,7 +48,7 @@ const CloseAppointment = ({ setActiveComponent }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUpcomingAppointments(appointmentResponse.data.appointments);
-        setSuccess(appointmentResponse.data.message);
+        if (appointmentResponse.data.message) toast.success(appointmentResponse.data.message);
         console.log('Upcoming appointments:', appointmentResponse.data.appointments);
         // Fetch services
         const servicesResponse = await axios.get('/api/services/get-services', {
@@ -57,7 +56,7 @@ const CloseAppointment = ({ setActiveComponent }) => {
         });
         setServices(servicesResponse.data.services);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch data');
+        toast.error(err.response?.data?.error || 'Failed to fetch data');
       }
     };
     fetchData();
@@ -110,12 +109,10 @@ const CloseAppointment = ({ setActiveComponent }) => {
           appt.appointment_id === selectedAppointment.appointment_id ? response.data.appointment : appt
         )
       );
-      setSuccess('Appointment updated successfully');
-      setError(null);
+      toast.success('Appointment updated successfully');
       setIsModalOpen(false);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to update appointment');
-      setSuccess(null);
+      toast.error(err.response?.data?.error || 'Failed to update appointment');
     }
   };
 
@@ -129,11 +126,9 @@ const CloseAppointment = ({ setActiveComponent }) => {
       setUpcomingAppointments((prev) =>
         prev.filter((appt) => appt.appointment_id !== appointmentId)
       );
-      setSuccess('Appointment cancelled successfully');
-      setError(null);
+      toast.success('Appointment cancelled successfully');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to cancel appointment');
-      setSuccess(null);
+      toast.error(err.response?.data?.error || 'Failed to cancel appointment');
     }
   };
 
@@ -189,8 +184,6 @@ const CloseAppointment = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Manage your upcoming salon appointments with ease. Cancel or reschedule as needed.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {upcomingAppointments.length === 0 ? (
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 text-center">

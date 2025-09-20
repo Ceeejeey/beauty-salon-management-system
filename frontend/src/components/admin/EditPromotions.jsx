@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaTag, FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 import axios from "../../api/axios";
 import { jwtDecode } from "jwt-decode";
-
+import toast from "react-hot-toast";
 const EditPromotions = ({ setActiveComponent }) => {
   const [promotions, setPromotions] = useState([]);
   const [services, setServices] = useState([]);
@@ -21,8 +21,6 @@ const EditPromotions = ({ setActiveComponent }) => {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
 
   // Fetch promotions and services
   useEffect(() => {
@@ -30,12 +28,12 @@ const EditPromotions = ({ setActiveComponent }) => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
-          setError("Please log in as an admin to manage promotions");
+          toast.error("Please log in as an admin to manage promotions");
           return;
         }
         const decoded = jwtDecode(token);
         if (decoded.role !== "admin") {
-          setError("Access restricted to admins");
+          toast.error("Access restricted to admins");
           return;
         }
 
@@ -49,9 +47,9 @@ const EditPromotions = ({ setActiveComponent }) => {
         ]);
         setPromotions(promoResponse.data.promotions);
         setServices(serviceResponse.data.services);
-        setSuccess(promoResponse.data.message);
+        toast.success(promoResponse.data.message);
       } catch (err) {
-        setError(err.response?.data?.error || "Failed to fetch data");
+        toast.error(err.response?.data?.error || "Failed to fetch data");
       }
     };
     fetchData();
@@ -73,8 +71,6 @@ const EditPromotions = ({ setActiveComponent }) => {
   // Handle form submission (add/edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     // Client-side validation
     if (
@@ -87,23 +83,23 @@ const EditPromotions = ({ setActiveComponent }) => {
       !formData.endDate ||
       !formData.usageLimit
     ) {
-      setError("All fields except image are required");
+      toast.error("All fields except image are required");
       return;
     }
     if (!/^[A-Z0-9]+$/.test(formData.code)) {
-      setError("Code must be uppercase alphanumeric");
+      toast.error("Code must be uppercase alphanumeric");
       return;
     }
     if (isNaN(formData.value) || formData.value <= 0) {
-      setError("Discount value must be a positive number");
+      toast.error("Discount value must be a positive number");
       return;
     }
     if (isNaN(formData.usageLimit) || formData.usageLimit <= 0) {
-      setError("Usage limit must be a positive integer");
+      toast.error("Usage limit must be a positive integer");
       return;
     }
     if (new Date(formData.startDate) >= new Date(formData.endDate)) {
-      setError("End date must be after start date");
+      toast.error("End date must be after start date");
       return;
     }
 
@@ -141,7 +137,7 @@ const EditPromotions = ({ setActiveComponent }) => {
             promo.promo_id === formData.id ? response.data.promotion : promo
           )
         );
-        setSuccess("Promotion updated successfully");
+        toast.success("Promotion updated successfully");
       } else {
         const response = await axios.post(
           "/api/promotions/create-promotion",
@@ -154,7 +150,7 @@ const EditPromotions = ({ setActiveComponent }) => {
           }
         );
         setPromotions([...promotions, response.data.promotion]);
-        setSuccess("Promotion created successfully");
+        toast.success("Promotion created successfully");
       }
       // Reset form
       setFormData({
@@ -173,7 +169,7 @@ const EditPromotions = ({ setActiveComponent }) => {
       setImagePreview(null);
       setIsEditing(false);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to save promotion");
+      toast.error(err.response?.data?.error || "Failed to save promotion");
     }
   };
 
@@ -204,10 +200,9 @@ const EditPromotions = ({ setActiveComponent }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPromotions(promotions.filter((promo) => promo.promo_id !== id));
-      setSuccess("Promotion deleted successfully");
-      setError(null);
+      toast.success("Promotion deleted successfully");
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to delete promotion");
+      toast.error(err.response?.data?.error || "Failed to delete promotion");
     }
   };
   const formatDate = (date) => {
@@ -262,8 +257,6 @@ const EditPromotions = ({ setActiveComponent }) => {
         Manage promotional offers for your salon. Add new promotions with images
         or edit existing ones.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="promotions-scroll">
         {/* Add/Edit Promotion Form */}
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
@@ -350,7 +343,7 @@ const EditPromotions = ({ setActiveComponent }) => {
                   Select Discount Type
                 </option>
                 <option value="percentage">Percentage (%)</option>
-                <option value="fixed">Fixed Amount ($)</option>
+                <option value="fixed">Fixed Amount (LKR)</option>
               </select>
             </div>
             <div>
@@ -457,8 +450,6 @@ const EditPromotions = ({ setActiveComponent }) => {
                     });
                     setImagePreview(null);
                     setIsEditing(false);
-                    setSuccess(null);
-                    setError(null);
                   }}
                 >
                   Cancel
@@ -550,7 +541,7 @@ const EditPromotions = ({ setActiveComponent }) => {
                   <td className="px-6 py-4 text-pink-500 font-medium">
                     {promotion.discount_type === "percentage"
                       ? `${promotion.value}% off`
-                      : `$${promotion.value} off`}
+                      : `LKR ${promotion.value} off`}
                   </td>
                   <td className="px-6 py-4 text-pink-500 font-medium">
                     {formatDate(promotion.start_date)}

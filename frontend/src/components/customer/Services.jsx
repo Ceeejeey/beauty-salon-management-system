@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FaCut, FaHands, FaSpa } from 'react-icons/fa';
 import axios from '../../api/axios';
+import { toast } from 'react-hot-toast';
 
 const Services = ({ setActiveComponent }) => {
   const [services, setServices] = useState([]);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
 
   // Map categories to icons
   const getIcon = (category) => {
@@ -32,9 +31,9 @@ const Services = ({ setActiveComponent }) => {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         setServices(response.data.services);
-        setSuccess(response.data.message);
+        if (response.data.message) toast.success(response.data.message);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch services');
+        toast.error(err.response?.data?.error || 'Failed to fetch services');
       }
     };
     fetchServices();
@@ -55,8 +54,6 @@ const Services = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Discover our range of premium beauty treatments designed to make you look and feel your best.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       {services.length === 0 ? (
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 text-center">
           <p className="text-gray-600 text-lg">No services available at the moment.</p>

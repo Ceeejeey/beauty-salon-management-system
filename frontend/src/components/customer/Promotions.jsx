@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FaGift } from 'react-icons/fa';
 import axios from '../../api/axios';
+import { toast } from 'react-hot-toast';
 
 const Promotions = ({ setActiveComponent }) => {
   const [promotions, setPromotions] = useState([]);
-  const [error, setError] = useState(null);
 
   // Fetch active promotions
   useEffect(() => {
@@ -13,7 +13,7 @@ const Promotions = ({ setActiveComponent }) => {
         const response = await axios.get('/api/promotions/active-promotions');
         setPromotions(response.data.promotions);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch promotions');
+        toast.error(err.response?.data?.error || 'Failed to fetch promotions');
       }
     };
     fetchPromotions();
@@ -58,7 +58,6 @@ const Promotions = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Discover exclusive deals and special offers to enhance your salon experience.
       </p>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="promotions-scroll">
         {promotions.length === 0 ? (
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 text-center">
@@ -96,7 +95,7 @@ const Promotions = ({ setActiveComponent }) => {
                     <span className="font-medium text-pink-500">
                       {promo.discount_type === 'percentage'
                         ? `${promo.value}% off`
-                        : `$${promo.value} off`}
+                        : `LKR ${promo.value} off`}
                     </span>
                   </p>
                   <p className="text-gray-600 text-sm mb-2">

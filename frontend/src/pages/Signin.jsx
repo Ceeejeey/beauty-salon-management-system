@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
 import salonImage from '../assets/salon2.jpg';
+import { toast } from 'react-hot-toast';
 
 const Signin = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -16,8 +15,6 @@ const Signin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     try {
       const response = await axios.post('/api/auth/signin', formData, {
@@ -27,7 +24,7 @@ const Signin = () => {
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
-      setSuccess(response.data.message || 'Signin successful!');
+      toast.success(response.data.message || 'Signin successful!');
       setFormData({ email: '', password: '' });
 
       // Redirect based on role
@@ -40,7 +37,7 @@ const Signin = () => {
       }
     } catch (err) {
       console.error('Signin error:', err);
-      setError(err.response?.data?.error || 'Signin failed!');
+      toast.error(err.response?.data?.error || 'Signin failed!');
     }
   };
 
@@ -84,13 +81,7 @@ const Signin = () => {
               Sign In to Your Account
             </h2>
 
-            {error && (
-              <div className="text-red-500 mb-4 text-center font-poppins">{error}</div>
-            )}
-            {success && (
-              <div className="text-green-500 mb-4 text-center font-poppins">{success}</div>
-            )}
-
+            
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="input-container">
                 <input

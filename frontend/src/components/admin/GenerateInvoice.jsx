@@ -3,7 +3,8 @@ import { FaFileInvoiceDollar, FaDownload } from 'react-icons/fa';
 import axios from '../../api/axios';
 import { jwtDecode } from 'jwt-decode';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// import autoTable from 'jspdf-autotable';
+import { toast } from 'react-hot-toast';
 
 const GenerateInvoice = ({ setActiveComponent }) => {
   const [appointments, setAppointments] = useState([]);
@@ -14,8 +15,6 @@ const GenerateInvoice = ({ setActiveComponent }) => {
     promo_id: '',
   });
   const [invoices, setInvoices] = useState([]);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
 
   // Get current date in Sri Lanka (2025-08-04)
   const currentDate = new Date().toLocaleDateString('en-CA', {
@@ -31,12 +30,12 @@ const GenerateInvoice = ({ setActiveComponent }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          setError('Please log in as an admin to generate invoices');
+          toast.error('Please log in as an admin to generate invoices');
           return;
         }
         const decoded = jwtDecode(token);
         if (decoded.role !== 'admin') {
-          setError('Access restricted to admins');
+          toast.error('Access restricted to admins');
           return;
         }
 
@@ -48,12 +47,12 @@ const GenerateInvoice = ({ setActiveComponent }) => {
         setAppointments(appointmentsResponse.data.appointments);
         setPromotions(promotionsResponse.data.promotions);
         setInvoices(invoicesResponse.data.invoices);
-        setSuccess('Data retrieved successfully');
+        toast.success('Data retrieved successfully');
         console.log('Appointments:', appointmentsResponse.data.appointments);
         console.log('Promotions:', promotionsResponse.data.promotions);
         console.log('Invoices:', invoicesResponse.data.invoices);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch data');
+        toast.error(err.response?.data?.error || 'Failed to fetch data');
       }
     };
     fetchData();
@@ -67,15 +66,13 @@ const GenerateInvoice = ({ setActiveComponent }) => {
 
    const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     if (!formData.appointment_id || !formData.payment_method) {
-      setError('Appointment and payment method are required');
+      toast.error('Appointment and payment method are required');
       return;
     }
     if (!['cash', 'card', 'online'].includes(formData.payment_method)) {
-      setError('Invalid payment method');
+      toast.error('Invalid payment method');
       return;
     }
 
@@ -90,7 +87,7 @@ const GenerateInvoice = ({ setActiveComponent }) => {
         headers: { Authorization: `Bearer ${token}` } },
       );
       setInvoices([...invoices, response.data.invoice]);
-      setSuccess('Invoice created successfully');
+      toast.success('Invoice created successfully');
       setFormData({ appointment_id: '', payment_method: '', promo_id: '' });
       // Refresh appointments and invoices after creating a new invoice
       const [appointmentsResponse, invoicesResponse] = await Promise.all([
@@ -101,7 +98,7 @@ const GenerateInvoice = ({ setActiveComponent }) => {
       setInvoices(invoicesResponse.data.invoices);
       handleDownloadInvoice(response.data.invoice);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create invoice');
+      toast.error(err.response?.data?.error || 'Failed to create invoice');
     }
   };
   // Format date for display
@@ -190,8 +187,6 @@ const GenerateInvoice = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Create invoices for completed appointments and process payments.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="invoices-scroll">
         {/* Invoice Generation Form */}
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
