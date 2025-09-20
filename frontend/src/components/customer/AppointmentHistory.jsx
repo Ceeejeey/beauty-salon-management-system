@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FaCalendarAlt, FaPlus } from 'react-icons/fa';
 import axios from '../../api/axios';
 import {jwtDecode} from 'jwt-decode';
+import toast from 'react-hot-toast';
 
 const AppointmentHistory = ({ setActiveComponent }) => {
   const [completedAppointments, setCompletedAppointments] = useState([]);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
 
   // Fetch completed appointments
   useEffect(() => {
@@ -14,7 +13,7 @@ const AppointmentHistory = ({ setActiveComponent }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          setError('Please log in to view your appointment history');
+          toast.error('Please log in to view your appointment history');
           return;
         }
         const decoded = jwtDecode(token);
@@ -24,9 +23,9 @@ const AppointmentHistory = ({ setActiveComponent }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCompletedAppointments(response.data.appointments);
-        setSuccess(response.data.message);
+        toast.success(response.data.message);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch appointment history');
+        toast.error(err.response?.data?.error || 'Failed to fetch appointment history');
       }
     };
     fetchAppointments();
@@ -88,8 +87,6 @@ const AppointmentHistory = ({ setActiveComponent }) => {
       <p className="text-gray-700 text-lg mb-8">
         Review your past salon visits and their details.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       
         {completedAppointments.length === 0 ? (
           <div className="bg-white p-8 rounded-3xl  border border-pink-100 text-center">

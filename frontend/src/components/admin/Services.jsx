@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../api/axios";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 const ManageServices = () => {
   const [formData, setFormData] = useState({
@@ -14,8 +15,6 @@ const ManageServices = () => {
   });
   const [services, setServices] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
   // Predefined categories
@@ -28,9 +27,9 @@ const ManageServices = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setServices(response.data.services);
-        setSuccess(response.data.message);
+        toast.success(response.data.message);
       } catch (err) {
-        setError(err.response?.data?.error || "Failed to fetch services");
+        toast.error(err.response?.data?.error || "Failed to fetch services");
       }
     };
     fetchServices();
@@ -47,8 +46,6 @@ const ManageServices = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     try {
       const payload = new FormData();
@@ -88,7 +85,7 @@ const ManageServices = () => {
         setServices((prev) => [...prev, response.data.service]);
       }
 
-      setSuccess(response.data.message);
+      toast.success(response.data.message);
       setFormData({
         service_id: null,
         name: "",
@@ -101,7 +98,7 @@ const ManageServices = () => {
       setImagePreview(null);
       setIsEditing(false);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to save service");
+      toast.error(err.response?.data?.error || "Failed to save service");
     }
   };
 
@@ -116,7 +113,7 @@ const ManageServices = () => {
 
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB > 5) {
-      setError("Image size must be less than 5MB");
+      toast.error("Image size must be less than 5MB");
       setFormData((prev) => ({ ...prev, imageFile: null }));
       setImagePreview(null);
       return;
@@ -142,14 +139,10 @@ const ManageServices = () => {
       service.image ? `data:image/jpeg;base64,${service.image}` : null
     );
     setIsEditing(true);
-    setError(null);
-    setSuccess(null);
   };
 
   // Delete service
   const handleDelete = async (id) => {
-    setSuccess(null);
-    setError(null);
     try {
       const response = await axios.delete(`/api/services/get-service/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -157,9 +150,9 @@ const ManageServices = () => {
       setServices((prev) =>
         prev.filter((service) => service.service_id !== id)
       );
-      setSuccess(response.data.message);
+      toast.success(response.data.message);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to delete service");
+      toast.error(err.response?.data?.error || "Failed to delete service");
     }
   };
 
@@ -183,133 +176,138 @@ const ManageServices = () => {
           }
         `}
       </style>
-      <h2 className="text-2xl font-bold text-pink-700 mb-4 flex items-center">
+      <h2 className="text-3xl sm:text-4xl font-extrabold text-pink-700 mb-6 flex items-center">
         <FaPlus className="mr-2 text-pink-500" /> Manage Services
       </h2>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
-      <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-        <div>
-          <label className="block text-gray-700 font-medium mb-1">Name</label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-            placeholder="Enter service name"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-gray-700 font-medium mb-1">
-            Category
-          </label>
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-            required
-          >
-            <option value="" disabled>
-              Select a category
-            </option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-gray-700 font-medium mb-1">
-            Description
-          </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-            placeholder="Enter service description"
-            rows="4"
-          />
-        </div>
-        <div>
-          <label className="block text-gray-700 font-medium mb-1">
-            Price ($)
-          </label>
-          <input
-            type="number"
-            name="price"
-            value={formData.price}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-            placeholder="Enter price"
-            step="0.01"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-gray-700 font-medium mb-1">
-            Duration
-          </label>
-          <input
-            type="text"
-            name="duration"
-            value={formData.duration}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-            placeholder="Enter duration (e.g., 1 hour)"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-gray-700 font-medium mb-1">Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="w-full p-3 border border-pink-200 rounded-lg"
-          />
-          {imagePreview && (
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="mt-4 w-32 h-32 object-cover rounded-lg"
+      <p className="text-gray-700 text-lg mb-8">
+        Here you can add, edit, and delete services for your salon.
+      </p>
+      <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
+        <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              placeholder="Enter service name"
+              required
             />
-          )}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <button
-            type="submit"
-            className="bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 hover:shadow-lg transition duration-300 font-poppins"
-          >
-            {isEditing ? "Update Service" : "Add Service"}
-          </button>
-          {isEditing && (
-            <button
-              type="button"
-              className="bg-white text-pink-700 px-4 py-2 rounded-lg border border-pink-500 hover:bg-pink-100 hover:text-pink-500 transition font-poppins"
-              onClick={() => {
-                setFormData({
-                  service_id: null,
-                  name: "",
-                  category: "",
-                  description: "",
-                  price: "",
-                  duration: "",
-                  image: null,
-                });
-                setImagePreview(null);
-                setIsEditing(false);
-              }}
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">
+              Category
+            </label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              required
             >
-              Cancel
+              <option value="" disabled>
+                Select a category
+              </option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">
+              Description
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              placeholder="Enter service description"
+              rows="4"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">
+              Price (LKR)
+            </label>
+            <input
+              type="number"
+              name="price"
+              value={formData.price}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              placeholder="Enter price"
+              step="0.01"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">
+              Duration
+            </label>
+            <input
+              type="text"
+              name="duration"
+              value={formData.duration}
+              onChange={handleInputChange}
+              className="w-full p-3 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              placeholder="Enter duration (e.g., 1 hour)"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">
+              Image
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="w-full p-3 border border-pink-200 rounded-lg"
+            />
+            {imagePreview && (
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="mt-4 w-32 h-32 object-cover rounded-lg"
+              />
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              type="submit"
+              className="bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 hover:shadow-lg transition duration-300 font-poppins"
+            >
+              {isEditing ? "Update Service" : "Add Service"}
             </button>
-          )}
-        </div>
-      </form>
+            {isEditing && (
+              <button
+                type="button"
+                className="bg-white text-pink-700 px-4 py-2 rounded-lg border border-pink-500 hover:bg-pink-100 hover:text-pink-500 transition font-poppins"
+                onClick={() => {
+                  setFormData({
+                    service_id: null,
+                    name: "",
+                    category: "",
+                    description: "",
+                    price: "",
+                    duration: "",
+                    image: null,
+                  });
+                  setImagePreview(null);
+                  setIsEditing(false);
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
       <div className="table-container ">
         <table className="w-full bg-white rounded-3xl shadow-xl border border-pink-100 overflow-hidden">
           <thead>
@@ -334,7 +332,7 @@ const ManageServices = () => {
                 <td className="p-2 font-poppins">
                   {service.description || "No description"}
                 </td>
-                <td className="p-2 font-poppins">${service.price}</td>
+                <td className="p-2 font-poppins">LKR {service.price}</td>
                 <td className="p-2 font-poppins">{service.duration}</td>
                 <td className="p-2 font-poppins">
                   {service.image ? (

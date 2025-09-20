@@ -43,7 +43,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
 
   return (
     <div
-      className={`fixed left-0 h-[calc(100vh-5rem)] w-64 bg-gradient-to-b from-pink-50 to-white shadow-xl z-20 transform ${
+      className={`fixed left-0 h-[calc(100vh-5rem)] w-64 bg-gradient-to-b from-pink-50 to-white shadow-xl z-20 transform overflow-y-auto ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-300 ease-in-out`}
     >
@@ -64,7 +64,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
               {item.subItems ? (
                 <div>
                   <button
-                    className="flex items-center p-3 text-gray-700 hover:text-pink-600 hover:bg-pink-100 w-full text-left rounded-lg transition duration-200 border border-pink-100"
+                    className="flex items-center p-3 text-gray-700 hover:text-pink-600 hover:bg-pink-100 w-full text-left rounded-lg transition duration-200 border border-pink-100 cursor-pointer"
                     onClick={() => {
                       if (item.name === 'Services') setIsServicesOpen(!isServicesOpen);
                       if (item.name === 'Appointments') setIsAppointmentsOpen(!isAppointmentsOpen);
@@ -95,7 +95,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
                     {item.subItems.map((subItem, subIndex) => (
                       <li key={subIndex}>
                         <button
-                          className="block w-full text-left pl-10 py-2 text-sm text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition duration-200 border border-pink-100"
+                          className="block w-full text-left pl-10 py-2 text-sm text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition duration-200 border border-pink-100 cursor-pointer"
                           onClick={subItem.action}
                         >
                           {subItem.name}
@@ -106,7 +106,7 @@ const AdminSidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) =
                 </div>
               ) : (
                 <button
-                  className="flex items-center p-3 text-gray-700 hover:text-pink-600 hover:bg-pink-100 w-full text-left rounded-lg transition duration-200 border border-pink-100"
+                  className="flex items-center p-3 text-gray-700 hover:text-pink-600 hover:bg-pink-100 w-full text-left rounded-lg transition duration-200 border border-pink-100 cursor-pointer"
                   onClick={item.action}
                 >
                   {item.icon}

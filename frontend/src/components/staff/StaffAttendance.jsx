@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { FaCalendarCheck, FaTasks } from 'react-icons/fa';
 import axios from '../../api/axios';
 import { jwtDecode } from 'jwt-decode';
+import { toast } from 'react-hot-toast';
 
 const SetAttendance = ({ setActiveComponent }) => {
   const [present, setPresent] = useState(0); // 0 for Absent, 1 for Present
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const currentDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Colombo' });
 
   // Fetch attendance for today
@@ -15,14 +15,14 @@ const SetAttendance = ({ setActiveComponent }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          setError('Please log in to set attendance');
+          toast.error('Please log in to set attendance');
           setLoading(false);
           return;
         }
         const decoded = jwtDecode(token);
         console.log('Decoded token:', decoded);
         if (!decoded.email || !decoded.email.startsWith('staff')) {
-          setError('Access restricted to staff');
+          toast.error('Access restricted to staff');
           setLoading(false);
           return;
         }
@@ -34,7 +34,7 @@ const SetAttendance = ({ setActiveComponent }) => {
         setPresent(response.data.present || 0); // Default to Absent if no record
         setLoading(false);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch attendance');
+        toast.error(err.response?.data?.error || 'Failed to fetch attendance');
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
           window.location.href = '/login';
@@ -47,7 +47,6 @@ const SetAttendance = ({ setActiveComponent }) => {
 
   const handleToggleAttendance = async () => {
     setLoading(true);
-    setError(null);
     try {
       const token = localStorage.getItem('token');
       const decoded = jwtDecode(token);
@@ -60,9 +59,10 @@ const SetAttendance = ({ setActiveComponent }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setPresent(newStatus);
+      toast.success(`Attendance updated: ${newStatus === 1 ? 'Present' : 'Absent'}`);
       console.log('Attendance updated:', newStatus === 1 ? 'Present' : 'Absent');
     } catch (error) {
-      setError(error.response?.data?.error || 'Failed to update attendance');
+      toast.error(error.response?.data?.error || 'Failed to update attendance');
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/login';
@@ -104,7 +104,6 @@ const SetAttendance = ({ setActiveComponent }) => {
       </h2>
       
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100">
-          {error && <div className="text-red-500 mb-4">{error}</div>}
           {loading ? (
             <p className="text-gray-700 text-lg">Loading attendance...</p>
           ) : (

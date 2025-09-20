@@ -31,7 +31,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
 
   return (
     <aside
-      className={`fixed top-25 bottom-0 w-64 bg-gradient-to-br from-pink-50 to-white shadow-xl transform lg:transform-none ${
+      className={`fixed h-full w-64 bg-gradient-to-br from-pink-50 to-white shadow-xl transform lg:transform-none ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } transition-transform duration-300 z-20 overflow-y-auto`}
     >
@@ -60,7 +60,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
               {item.dropdown ? (
                 <div>
                   <button
-                    className={`flex items-center w-full px-4 py-3 text-gray-700 hover:bg-pink-100 hover:text-pink-500 rounded-3xl font-semibold shadow-sm transition duration-300 ease-in-out transform hover:scale-105 ${
+                    className={`flex items-center w-full px-4 py-3 text-gray-700 hover:bg-pink-100 hover:text-pink-500 rounded-3xl font-semibold shadow-sm transition duration-300 ease-in-out transform hover:scale-105 cursor-pointer ${
                       isAppointmentOpen ? 'bg-pink-100 text-pink-500' : ''
                     }`}
                     onClick={() => setIsAppointmentOpen(!isAppointmentOpen)}
@@ -78,7 +78,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
                       {item.dropdown.map((subItem) => (
                         <button
                           key={subItem.name}
-                          className="block w-full text-left px-4 py-2 text-base text-gray-600 hover:bg-pink-50 hover:text-pink-500 rounded-xl transition duration-150 hover:shadow-sm"
+                          className="block w-full text-left px-4 py-2 text-base text-gray-600 hover:bg-pink-50 hover:text-pink-500 rounded-xl transition duration-150 hover:shadow-sm cursor-pointer"
                           onClick={() => handleNavClick(subItem.component)}
                         >
                           {subItem.name}
@@ -89,7 +89,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
                 </div>
               ) : (
                 <button
-                  className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-pink-100 hover:text-pink-500 rounded-3xl font-semibold shadow-sm transition duration-300 ease-in-out transform hover:scale-105"
+                  className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-pink-100 hover:text-pink-500 rounded-3xl font-semibold shadow-sm transition duration-300 ease-in-out transform hover:scale-105 cursor-pointer"
                   onClick={() => handleNavClick(item.component)}
                 >
                   <span className="mr-3 text-xl text-pink-500">{item.icon}</span>

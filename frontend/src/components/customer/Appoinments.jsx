@@ -3,6 +3,7 @@ import { FaCalendarAlt, FaHistory } from "react-icons/fa";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import axios from "../../api/axios";
+import { toast } from 'react-hot-toast';
 
 const Appointments = ({ setActiveComponent }) => {
   const [formData, setFormData] = useState({
@@ -16,8 +17,6 @@ const Appointments = ({ setActiveComponent }) => {
   const [bookedSlots, setBookedSlots] = useState([]);
   const [blockedSlots, setBlockedSlots] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
 
   // Generate time slots (09:00 AM to 06:00 PM, hourly)
   const generateTimeSlots = () => {
@@ -114,7 +113,7 @@ const Appointments = ({ setActiveComponent }) => {
         setServices(response.data.services);
         console.log("Services fetched:", response.data.services);
       } catch (err) {
-        setError(err.response?.data?.error || "Failed to fetch services");
+        toast.error(err.response?.data?.error || "Failed to fetch services");
       }
     };
     fetchServices();
@@ -154,7 +153,7 @@ const Appointments = ({ setActiveComponent }) => {
           console.log("Blocked slots fetched:", normalizedBlocked);
           console.log("Time slots:", timeSlots);
         } catch (err) {
-          setError(err.response?.data?.error || "Failed to fetch slots");
+          toast.error(err.response?.data?.error || "Failed to fetch slots");
         }
       };
       fetchSlots();
@@ -195,12 +194,10 @@ const Appointments = ({ setActiveComponent }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     const validationError = validateForm();
     if (validationError) {
-      setError(validationError);
+      toast.error(validationError);
       return;
     }
 
@@ -219,7 +216,7 @@ const Appointments = ({ setActiveComponent }) => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      setSuccess(response.data.message);
+      toast.success(response.data.message);
       setFormData({
         service_id: "",
         appointment_date: "",
@@ -230,7 +227,7 @@ const Appointments = ({ setActiveComponent }) => {
       setBookedSlots([]);
       setBlockedSlots([]);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to book appointment");
+      toast.error(err.response?.data?.error || "Failed to book appointment");
     }
   };
 
@@ -298,8 +295,6 @@ const Appointments = ({ setActiveComponent }) => {
         Schedule your next salon visit with ease. Select a date from the
         calendar, choose an available time slot, and complete the booking form.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-8 mb-8 hover:shadow-2xl transition duration-300">
         <h3 className="text-xl font-semibold text-pink-700 mb-4">
           Select a Date
@@ -406,7 +401,7 @@ const Appointments = ({ setActiveComponent }) => {
                 </option>
                 {services.map((service) => (
                   <option key={service.service_id} value={service.service_id}>
-                    {service.name} (${service.price})
+                    {service.name} (LKR {service.price})
                   </option>
                 ))}
               </select>

@@ -4,6 +4,7 @@ import axios from '../../api/axios';
 import { jwtDecode } from 'jwt-decode';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 const TrackExpenses = ({ setActiveComponent }) => {
   const [expenses, setExpenses] = useState([]);
@@ -16,8 +17,6 @@ const TrackExpenses = ({ setActiveComponent }) => {
     category: '',
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
 
   // Get current date in Sri Lanka (2025-08-04)
   const currentDate = new Date().toLocaleDateString('en-CA', {
@@ -39,12 +38,12 @@ const TrackExpenses = ({ setActiveComponent }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          setError('Please log in as an admin to manage expenses');
+          toast.error('Please log in as an admin to manage expenses');
           return;
         }
         const decoded = jwtDecode(token);
         if (decoded.role !== 'admin') {
-          setError('Access restricted to admins');
+          toast.error('Access restricted to admins');
           return;
         }
 
@@ -54,11 +53,11 @@ const TrackExpenses = ({ setActiveComponent }) => {
         ]);
         setExpenses(expensesResponse.data.expenses);
         setInvoices(invoicesResponse.data.invoices);
-        setSuccess('Data retrieved successfully');
+        toast.success('Data retrieved successfully');
         console.log('Expenses:', expensesResponse.data.expenses);
         console.log('Invoices:', invoicesResponse.data.invoices);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch data');
+        toast.error(err.response?.data?.error || 'Failed to fetch data');
       }
     };
     fetchData();
@@ -89,24 +88,22 @@ const TrackExpenses = ({ setActiveComponent }) => {
   // Handle form submission (add/edit expense)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess(null);
-    setError(null);
 
     // Client-side validation
     if (!formData.date || !formData.description || !formData.amount || !formData.category) {
-      setError('All fields are required');
+      toast.error('All fields are required');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.date)) {
-      setError('Invalid date format');
+      toast.error('Invalid date format');
       return;
     }
     if (parseFloat(formData.amount) <= 0) {
-      setError('Amount must be greater than 0');
+      toast.error('Amount must be greater than 0');
       return;
     }
     if (!['Supplies', 'Utilities', 'Rent', 'Other'].includes(formData.category)) {
-      setError('Invalid category');
+      toast.error('Invalid category');
       return;
     }
 
@@ -128,19 +125,19 @@ const TrackExpenses = ({ setActiveComponent }) => {
             exp.expense_id === formData.id ? response.data.expense : exp
           )
         );
-        setSuccess('Expense updated successfully');
+        toast.success('Expense updated successfully');
       } else {
         const response = await axios.post('/api/expenses/create-expense', data, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setExpenses([...expenses, response.data.expense]);
-        setSuccess('Expense created successfully');
+        toast.success('Expense created successfully');
       }
       // Reset form
       setFormData({ id: null, date: currentDate, description: '', amount: '', category: '' });
       setIsEditing(false);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save expense');
+      toast.error(err.response?.data?.error || 'Failed to save expense');
     }
   };
 
@@ -154,8 +151,6 @@ const TrackExpenses = ({ setActiveComponent }) => {
       category: expense.category,
     });
     setIsEditing(true);
-    setSuccess(null);
-    setError(null);
   };
 
   // Handle delete button click
@@ -166,10 +161,9 @@ const TrackExpenses = ({ setActiveComponent }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setExpenses(expenses.filter((exp) => exp.expense_id !== id));
-      setSuccess('Expense deleted successfully');
-      setError(null);
+      toast.success('Expense deleted successfully');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete expense');
+      toast.error(err.response?.data?.error || 'Failed to delete expense');
     }
   };
 
@@ -304,8 +298,6 @@ const handleDownloadReport = () => {
       <p className="text-gray-700 text-lg mb-8">
         Manage expenses, view paid invoices, and track daily financial reports.
       </p>
-      {success && <div className="text-green-500 mb-4">{success}</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="expenses-scroll">
         {/* Daily Financial Report */}
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 mb-8">
@@ -410,8 +402,6 @@ const handleDownloadReport = () => {
                   onClick={() => {
                     setFormData({ id: null, date: currentDate, description: '', amount: '', category: '' });
                     setIsEditing(false);
-                    setSuccess(null);
-                    setError(null);
                   }}
                 >
                   Cancel

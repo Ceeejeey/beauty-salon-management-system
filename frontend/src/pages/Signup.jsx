@@ -3,6 +3,7 @@ import { useNavigate} from 'react-router-dom'
 import axios from '../api/axios'; // Adjust the path as needed
 import { Link } from 'react-router-dom';
 import salonImage from '../assets/salon.jpg'; // Adjust the path as needed
+import { toast } from 'react-hot-toast';
 
 const Signup = () => {
   const fileInputRef = useRef(null);
@@ -15,8 +16,6 @@ const Signup = () => {
     password: '',
   });
   const [fileName, setFileName] = useState('Upload Profile Picture');
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
 
   const navigate = useNavigate();
 
@@ -42,8 +41,6 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
 
     try {
       const formDataToSend = new FormData();
@@ -58,12 +55,12 @@ const Signup = () => {
         },
       });
 
-      setSuccess(response.data.message || 'Signup successful!');
+      toast.success(response.data.message || 'Signup successful!');
       setFormData({ fullName: '', phone: '', email: '', birthday: '', profilePicture: null, password: '' });
       setFileName('Upload Profile Picture');
       navigate('/signin')
     } catch (error) {
-      setError(error.response?.data?.error || error.message || 'Signup failed');
+      toast.error(error.response?.data?.error || error.message || 'Signup failed');
       console.error('Signup error:', error.response ? error.response.data : error.message);
     }
   };
@@ -128,9 +125,7 @@ const Signup = () => {
               Create Your Account
             </h2>
 
-            {error && <p className="text-red-500 text-sm text-center font-poppins mb-4">{error}</p>}
-            {success && <p className="text-green-500 text-sm text-center font-poppins mb-4">{success}</p>}
-
+            
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="input-container">
                 <input

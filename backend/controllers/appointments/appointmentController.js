@@ -100,10 +100,11 @@ const getAppointmentByCustomerId = async (req, res) => {
       return res.status(403).json({ error: 'Access denied: Cannot view other users\' appointments' });
     }
     const [appointments] = await pool.execute(
-      `SELECT a.appointment_id, a.customer_id, a.service_id, a.appointment_date, a.appointment_time, a.status, a.notes, s.name AS service_name, u.name AS customer_name
+      `SELECT a.appointment_id, a.customer_id, a.service_id, a.appointment_date, a.appointment_time, a.status, a.notes, s.name AS service_name, u.name AS customer_name, st.name AS staff_name
        FROM appointments a
        JOIN services s ON a.service_id = s.service_id
        JOIN users u ON a.customer_id = u.user_id
+       JOIN staff st ON a.staff_id = st.user_id
        WHERE a.customer_id = ? AND a.status = 'Completed'`,
       [id]
     );
