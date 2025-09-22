@@ -123,7 +123,7 @@ const AppointmentHistory = ({ setActiveComponent }) => {
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                       appointment.status === 'Completed'
                         ? 'bg-green-100 text-green-700'
-                        : appointment.status === 'Pending'
+                        : appointment.status === 'Approved'
                         ? 'bg-yellow-100 text-yellow-700'
                         : 'bg-red-100 text-red-700'
                     }`}>

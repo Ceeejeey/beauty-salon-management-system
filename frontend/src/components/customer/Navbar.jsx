@@ -5,6 +5,7 @@ import {
   FaUser,
   FaUserCircle,
   FaSignOutAlt,
+  FaTrash,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
@@ -86,6 +87,26 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
     }
   };
 
+  // Delete notification
+  const handleDeleteNotification = async (notification_id) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`/api/notifications/${notification_id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications((prev) =>
+        prev.filter((n) => n.notification_id !== notification_id)
+      );
+      setNotificationCount(
+        notifications.filter(
+          (n) => n.notification_id !== notification_id && !n.is_read
+        ).length
+      );
+    } catch (error) {
+      console.error("Delete notification error:", error);
+    }
+  };
+
   const profileItems = [
     { name: "Profile", component: "Profile", icon: <FaUserCircle /> },
     {
@@ -161,21 +182,36 @@ const Navbar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
                     {notifications.map((notification) => (
                       <div
                         key={notification.notification_id}
-                        className={`px-5 py-3 text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition duration-300 ease-in-out cursor-pointer ${
+                        className={`px-5 py-3 text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition duration-300 ease-in-out flex justify-between items-center ${
                           notification.is_read ? "opacity-70" : "font-semibold"
                         }`}
-                        onClick={() => handleNotificationClick(notification)}
                       >
-                        <p>{notification.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(notification.created_at).toLocaleString(
-                            "en-US",
-                            {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            }
-                          )}
-                        </p>
+                        <div
+                          className="flex-1 cursor-pointer"
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <p>{notification.message}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(notification.created_at).toLocaleString(
+                              "en-US",
+                              {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              }
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          className="ml-3 p-2 rounded-full hover:bg-pink-300 text-pink-500 hover:text-pink-700 transition duration-200 flex items-center justify-center"
+                          onClick={() =>
+                            handleDeleteNotification(
+                              notification.notification_id
+                            )
+                          }
+                          aria-label="Delete notification"
+                        >
+                          <FaTrash className="w-4 h-4" />
+                        </button>
                       </div>
                     ))}
                   </div>

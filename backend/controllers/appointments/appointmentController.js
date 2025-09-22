@@ -105,7 +105,7 @@ const getAppointmentByCustomerId = async (req, res) => {
        JOIN services s ON a.service_id = s.service_id
        JOIN users u ON a.customer_id = u.user_id
        JOIN staff st ON a.staff_id = st.user_id
-       WHERE a.customer_id = ? AND a.status = 'Completed'`,
+       WHERE a.customer_id = ? AND a.status IN ('Completed', 'Approved', 'Cancelled', 'Rejected')`,
       [id]
     );
     res.status(200).json({
@@ -135,7 +135,7 @@ const getAppointmentByCustomerIdForReschedule = async (req, res) => {
        FROM appointments a
        JOIN services s ON a.service_id = s.service_id
        JOIN users u ON a.customer_id = u.user_id
-       WHERE a.customer_id = ? AND a.status != 'Completed'`,
+       WHERE a.customer_id = ? AND a.status = 'Pending'`,
       [customer_id]
     );
     res.status(200).json({

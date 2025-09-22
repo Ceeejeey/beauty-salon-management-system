@@ -98,8 +98,8 @@ const Dashboard = () => {
   const componentMap = {
     Dashboard: () => <DashboardHome setActiveComponent={setActiveComponent} />,
     'Book Appointment': () => <BookAppointment setActiveComponent={setActiveComponent} />,
-    'Close Appointment': () => <CloseAppointment />,
-    'Appointment History': () => <AppointmentHistory />,
+    'Close Appointment': () => <CloseAppointment setActiveComponent={setActiveComponent}/>,
+    'Appointment History': () => <AppointmentHistory setActiveComponent={setActiveComponent} />,
     Feedback: () => <Feedback setActiveComponent={setActiveComponent} />,
     'Explore Services': () => <Services setActiveComponent={setActiveComponent} />,
     'Promotions and Offers': () => <Promotions setActiveComponent={setActiveComponent} />,

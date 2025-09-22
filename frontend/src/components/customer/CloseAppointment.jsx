@@ -135,6 +135,7 @@ const CloseAppointment = ({ setActiveComponent }) => {
   const handleViewHistory = () => {
     if (setActiveComponent) {
       setActiveComponent('Appointment History');
+      console.log('Switched to Appointment History view');
     }
   };
 
@@ -186,7 +187,7 @@ const CloseAppointment = ({ setActiveComponent }) => {
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {upcomingAppointments.length === 0 ? (
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 text-center">
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100 text-center w-full">
             <p className="text-gray-600 text-lg">No upcoming appointments found.</p>
             <button
               className="mt-4 bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 transition font-poppins"
@@ -246,7 +247,7 @@ const CloseAppointment = ({ setActiveComponent }) => {
                   <option value="" disabled>Select a service</option>
                   {services.map((service) => (
                     <option key={service.service_id} value={service.service_id}>
-                      {service.name} (${service.price})
+                      {service.name} (LKR {service.price})
                     </option>
                   ))}
                 </select>
