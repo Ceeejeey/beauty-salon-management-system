@@ -11,7 +11,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, setActiveComponent }) => {
       icon: <FaCalendarAlt />,
       dropdown: [
         { name: 'Book Appointment', component: 'Book Appointment' },
-        { name: 'Close Appointment', component: 'Close Appointment' },
+        { name: 'Pending Appointments', component: 'Close Appointment' },
         { name: 'Appointment History', component: 'Appointment History' },
         { name: 'Feedback', component: 'Feedback' },
       ],

@@ -83,8 +83,42 @@ const markNotificationRead = async (req, res) => {
   }
 };
 
+// Delete notification (customer)
+const deleteNotification = async (req, res) => {
+  try {
+    const { notification_id } = req.params;
+    const user = req.user;
+
+    // Input validation
+    if (!notification_id || isNaN(notification_id)) {
+      return res.status(400).json({ error: 'Valid notification ID is required' });
+    }
+
+    // Verify notification exists and belongs to user
+    const [notifications] = await pool.execute(
+      `SELECT * FROM notifications WHERE notification_id = ? AND user_id = ?`,
+      [notification_id, user.user_id]
+    );
+    if (notifications.length === 0) {
+      return res.status(404).json({ error: 'Notification not found or not owned by user' });
+    }
+
+    // Delete notification
+    await pool.execute(
+      `DELETE FROM notifications WHERE notification_id = ? AND user_id = ?`,
+      [notification_id, user.user_id]
+    );
+
+    res.status(200).json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    console.error('Delete notification error:', error);
+    res.status(500).json({ error: 'Server error during notification deletion' });
+  }
+};
+
 module.exports = {
   
   getNotifications: [getNotifications],
   markNotificationRead: [markNotificationRead],
+  deleteNotification: [deleteNotification],
 };

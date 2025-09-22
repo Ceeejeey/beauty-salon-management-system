@@ -70,13 +70,13 @@ const AboutUs = () => {
               📞 +94 77 567 890
             </p>
             <p className="text-gray-700 text-lg mb-6">
-              📧 info@glamourhaven.com
+              📧 info@salondewlee.com
             </p>
             <a
-              href="/dashboard"
+              href="/"
               className="inline-block bg-pink-500 text-white py-3 px-6 rounded-full font-semibold hover:bg-pink-600 transition duration-300 transform hover:scale-105"
             >
-              Book Now
+              Go to Homepage
             </a>
           </div>
         </div>
@@ -85,7 +85,7 @@ const AboutUs = () => {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-6">
         <div className="container mx-auto px-6 text-center">
-          <p>&copy; 2025 Glamour Haven. All rights reserved.</p>
+          <p>&copy; 2025 Salon Dewlee. All rights reserved.</p>
         </div>
       </footer>
     </div>
