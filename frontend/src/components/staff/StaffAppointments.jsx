@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaTasks, FaCheckCircle } from 'react-icons/fa';
 import axios from '../../api/axios';
 import { jwtDecode } from 'jwt-decode';
+import { toast } from 'react-hot-toast';
 
 const StaffAppointments = ({ setActiveComponent }) => {
   const [appointments, setAppointments] = useState([]);
@@ -62,9 +63,11 @@ const StaffAppointments = ({ setActiveComponent }) => {
           appt.appointment_id === id ? { ...appt, status: 'Completed' } : appt
         )
       );
+      toast.success('Appointment marked as completed!');
       console.log('Appointment marked as Completed:', id);
     } catch (error) {
       setError(error.response?.data?.error || 'Failed to complete appointment');
+      toast.error(error.response?.data?.error || 'Failed to complete appointment');
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/login';

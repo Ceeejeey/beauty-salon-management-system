@@ -541,7 +541,7 @@ const getStaffAppointments = async (req, res) => {
        JOIN services s ON a.service_id = s.service_id
        JOIN staff st ON a.staff_id = st.user_id
        JOIN users u ON a.customer_id = u.user_id
-       WHERE a.staff_id = ? AND a.status IN ('Approved')
+       WHERE a.staff_id = ? AND a.status IN ('Approved', 'Completed')
        ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
       [staffId]
     );
